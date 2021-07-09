@@ -43,14 +43,15 @@
   position:relative;
   textarea{
     width:100%;
-    min-height:10em;
+    min-height:15em;
     padding:2em;
     box-sizing:border-box;
   }
 }
 
 #controls{
-  span{
-    display:block;
+
+  strong{
+    margin:0 .5em;
   }
 }

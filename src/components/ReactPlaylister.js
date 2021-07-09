@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
 
-export const ReactPlaylister = (props) => {
+export const ReactPlaylister = forwardRef((props, ref) => {
+
+  const reactPlayerRef = useRef();
 
   const [unplayableUrls,setUnplayableUrls] = useState([]);//list of unplayable URLs
 
@@ -78,22 +80,6 @@ export const ReactPlaylister = (props) => {
     setUnplayableUrls(urls);
   }
 
-  const handlePrevious = () => {
-    setReverse(true);
-    const newIndex = getNextPlayableIndex(index,props.loop,true);
-    if (newIndex !== undefined){
-      setIndex(newIndex);
-    }
-  }
-
-  const handleNext = () => {
-    setReverse(false);
-    const newIndex = getNextPlayableIndex(index,props.loop,false);
-    if (newIndex !== undefined){
-      setIndex(newIndex);
-    }
-  }
-
   const handleReady = () => {
     setReverse(false);//if we were skipping backwards, resets it.
     if (typeof props.onReady === 'function') {
@@ -118,18 +104,15 @@ export const ReactPlaylister = (props) => {
 
   }
 
-  //sort non-playable URLs when urls prop is updated
+  //if any, update current index when urls prop is updated (url could have moved within array)
   useEffect(() => {
+    if (index===undefined) return;
 
-    let playable = props.urls.filter(ReactPlayer.canPlay);
-    let unplayable = props.urls.filter(x => !playable.includes(x));
-
-    unplayable = unplayableUrls.concat(unplayable); //let's keep the old unplayable items; it could be useful!
-    unplayable = [...new Set(unplayable)];//make unique
-    setUnplayableUrls(unplayable);
+    let newIndex = props.urls.indexOf(url);
+    newIndex = (newIndex !== -1) ? newIndex : 0;
+    setIndex(newIndex);
 
   }, [props.urls]);
-
 
   //update index when prop changes
   useEffect(() => {
@@ -137,24 +120,33 @@ export const ReactPlaylister = (props) => {
     setIndex(parseInt(props.index));
   }, [props.index]);
 
-
   useEffect(() => {
     //update URL when index changes
     const url = props.urls[index];
-    if (url){
-        setUrl(url);
-    }
+    setUrl(url);
+
     //tell parent index has changed
     if (typeof props.onIndex === 'function') {
       props.onIndex(index);
     }
-  }, [index]);
+  }, [index,props.urls]);
+
+  //sort non-playable URLs when urls prop is updated
+  useEffect(() => {
+
+    let playable = props.urls.filter(ReactPlayer.canPlay);
+    let unplayable = props.urls.filter(x => !playable.includes(x));
+
+    unplayable = [...new Set(unplayable)];//make unique
+    setUnplayableUrls(unplayable);
+
+  }, [props.urls]);
 
   //update previous/next controls
   useEffect(() => {
     setHasPrevious( (getNextPlayableIndex(index,props.loop,true) !== undefined) );
     setHasNext( (getNextPlayableIndex(index,props.loop,false) !== undefined) );
-  }, [index,unplayableUrls]);
+  }, [index,unplayableUrls,props.loop]);
 
   //let know parent if we can go backward
   useEffect(() => {
@@ -170,40 +162,62 @@ export const ReactPlaylister = (props) => {
     }
   }, [hasNext]);
 
-
-  //when non-playable URLs are updated
+  //when non-playable URLs are updated; return an object of ignored keys=>urls to the parent
   useEffect(() => {
-    console.log("NOT PLAYABLE URLS",unplayableUrls);
+
+    const getIgnoredUrlsObj = () => {
+      let urlsObj = Object.assign({},props.urls);//array to object
+      let output = {};
+
+      for (const [key, url] of Object.entries(urlsObj)) {
+        if ( unplayableUrls.includes(url) ){
+          output[key] = url;
+        }
+      }
+      return output;
+    }
+
+    if (typeof props.onIgnoredUrls === 'function') {
+      const ignored = getIgnoredUrlsObj();
+      props.onIgnoredUrls(ignored);
+    }
+
   }, [unplayableUrls]);
+
+  //methods parent can use
+  //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
+  useImperativeHandle(
+      ref,
+      () => ({
+        previous() {
+          setReverse(true);
+          const newIndex = getNextPlayableIndex(index,props.loop,true);
+          if (newIndex !== undefined){
+            setIndex(newIndex);
+          }
+        },
+        next() {
+          setReverse(false);
+          const newIndex = getNextPlayableIndex(index,props.loop,false);
+          if (newIndex !== undefined){
+            setIndex(newIndex);
+          }
+        },
+        getReactPlayer(){
+          return reactPlayerRef.current;
+        }
+       }),
+   )
 
   return (
     <div className="react-playlister">
-      <div id="controls">
-        <p><strong>index</strong><span>{index}</span></p>
-        <p><strong>url</strong><span>{url}</span></p>
-        <p><strong>non playable</strong><span>{JSON.stringify(unplayableUrls,null,2)}</span></p>
-        <p><strong>loop</strong><span>{props.loop ? 'true' : 'false'}</span></p>
-
-        <p>
-          <button
-          onClick={handlePrevious}
-          disabled={!hasPrevious}
-          >Previous</button>
-        </p>
-
-        <p>
-          <button
-          onClick={handleNext}
-          disabled={!hasNext}
-          >Next</button>
-        </p>
-
-      </div>
       <ReactPlayer
+      ref={reactPlayerRef}
+      playing={props.playing}
       url={url}
       onError={handleError}
       onReady={handleReady}
       />
     </div>
   );
-}
+})
