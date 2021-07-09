@@ -15,11 +15,15 @@ function App() {
   ]);
 
   const handleTogglePrevious = (bool) => {
-    console.log("APP / CAN PREVIOUS ?" + bool);
+    console.log("APP / CAN PREVIOUS ?",bool);
   }
 
   const handleToggleNext = (bool) => {
-    console.log("APP / CAN NEXT ?" + bool);
+    console.log("APP / CAN NEXT ?",bool);
+  }
+
+  const handleIndex = (index) => {
+    console.log("APP / INDEX",index);
   }
 
   return (
@@ -32,8 +36,10 @@ function App() {
       <ReactPlaylister
       urls={urls}
       loop={false}
+      autoskip={true}
       onTogglePrevious={handleTogglePrevious}
       onToggleNext={handleToggleNext}
+      onIndex={handleIndex}
       />
     </div>
   );

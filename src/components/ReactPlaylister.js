@@ -7,9 +7,9 @@ export const ReactPlaylister = (props) => {
 
   const [index, setIndex] = useState(0);//current url index
   const [url, setUrl] = useState();//current url
-  const [reverse, setReverse] = useState(false);
   const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
   const [hasNext,setHasNext] = useState(true);//can we play the next track ?
+  const [reverse,setReverse] = useState(false);//do we iterate URLs backwards ?
 
   const getNextPlayableIndex = (index,loop,reverse) => {
 
@@ -55,8 +55,6 @@ export const ReactPlaylister = (props) => {
 
       index = getNextIndex(index,loop,reverse);
 
-      console.log("NEXT INDEX",index);
-
       if (index === undefined) break; //no next index found
       if (index === initialIndex) break; //avoid infinite loop !
 
@@ -64,8 +62,6 @@ export const ReactPlaylister = (props) => {
       const nextUrl = props.urls[index];
       const nextPlayable = !unplayableUrls.includes(nextUrl);
       if (!nextPlayable) continue;
-
-      console.log("INDEX:"+initialIndex+", NEWINDEX:"+index,"NEW URL:"+nextUrl,"PLAYABLE:"+nextPlayable);
 
       newIndex = index;
 
@@ -83,15 +79,26 @@ export const ReactPlaylister = (props) => {
   }
 
   const handlePrevious = () => {
+    setReverse(true);
     const newIndex = getNextPlayableIndex(index,props.loop,true);
-    if (newIndex === undefined) return;
-    setIndex(newIndex);
+    if (newIndex !== undefined){
+      setIndex(newIndex);
+    }
   }
 
   const handleNext = () => {
+    setReverse(false);
     const newIndex = getNextPlayableIndex(index,props.loop,false);
-    if (newIndex === undefined) return;
-    setIndex(newIndex);
+    if (newIndex !== undefined){
+      setIndex(newIndex);
+    }
+  }
+
+  const handleReady = () => {
+    setReverse(false);//if we were skipping backwards, resets it.
+    if (typeof props.onReady === 'function') {
+      props.onReady();
+    }
   }
 
   const handleError = (e) => {
@@ -100,6 +107,15 @@ export const ReactPlaylister = (props) => {
     if (typeof props.onError === 'function') {
       props.onError(e);
     }
+
+    //skip automatically if the player is playing
+    if (props.playing && props.autoskip){
+      const newIndex = getNextPlayableIndex(index,props.loop,reverse);
+      if (newIndex !== undefined){
+        setIndex(newIndex);
+      }
+    }
+
   }
 
   //sort non-playable URLs when urls prop is updated
@@ -114,15 +130,24 @@ export const ReactPlaylister = (props) => {
 
   }, [props.urls]);
 
+
   //update index when prop changes
   useEffect(() => {
     if (props.index === undefined) return;
     setIndex(parseInt(props.index));
   }, [props.index]);
 
-  //update URL when index changes
+
   useEffect(() => {
-    setUrl(props.urls[index])
+    //update URL when index changes
+    const url = props.urls[index];
+    if (url){
+        setUrl(url);
+    }
+    //tell parent index has changed
+    if (typeof props.onIndex === 'function') {
+      props.onIndex(index);
+    }
   }, [index]);
 
   //update previous/next controls
@@ -177,6 +202,7 @@ export const ReactPlaylister = (props) => {
       <ReactPlayer
       url={url}
       onError={handleError}
+      onReady={handleReady}
       />
     </div>
   );
