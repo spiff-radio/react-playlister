@@ -1,23 +1,40 @@
 import logo from './logo.svg';
-import './App.css';
+import './App.scss';
+import React, { useState, useEffect } from "react";
+import { ReactPlaylister } from "./components/ReactPlaylister";
 
 function App() {
+
+  const [urls, setUrls] = useState([
+    'https://www.youtube.com/watch?v=ysz5S6PUM-U',
+    'https://www.youtube.com/watch?v=K5LU8K7ZK34',
+    'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends',
+    'https://www.kiki.com',
+    'https://www.youtube.com/watch?v=NwMOpaxroTg',
+    'https://www.caca.com'
+  ]);
+
+  const handleTogglePrevious = (bool) => {
+    console.log("APP / CAN PREVIOUS ?" + bool);
+  }
+
+  const handleToggleNext = (bool) => {
+    console.log("APP / CAN NEXT ?" + bool);
+  }
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div id="inputPlaylist">
+        <textarea>
+        {JSON.stringify(urls,null,2) }
+        </textarea>
+      </div>
+      <ReactPlaylister
+      urls={urls}
+      loop={false}
+      onTogglePrevious={handleTogglePrevious}
+      onToggleNext={handleToggleNext}
+      />
     </div>
   );
 }
