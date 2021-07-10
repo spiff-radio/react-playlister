@@ -7,17 +7,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [unplayableUrls,setUnplayableUrls] = useState([]);//list of unplayable URLs
 
-  const [index, setIndex] = useState(0);//current url index
+  const [index, setIndex] = useState(props.index);//current url index
   const [url, setUrl] = useState();//current url
   const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
   const [hasNext,setHasNext] = useState(true);//can we play the next track ?
   const [reverse,setReverse] = useState(false);//do we iterate URLs backwards ?
+  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
   const getNextPlayableIndex = (index,loop,reverse) => {
 
     const getNextIndex = (index,loop,reverse) => {
 
-      if (index === undefined) return;
+      if (!props.urls.length) return;
+      if (index === undefined) return 0;
 
       let newIndex;
       let endIndex = props.urls.length-1;
@@ -49,16 +51,30 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     }
 
-    if (index === undefined) return;
-
     const initialIndex = index;
+    let firstFoundIndex;
     let newIndex;
+
     while ( newIndex===undefined )  {
 
       index = getNextIndex(index,loop,reverse);
 
+      /*
+      console.log("Iterate for #"+initialIndex,{
+        'index':index,
+        'loop':loop,
+        'reverse':reverse,
+        'iteration':iteration
+      })
+      */
+
       if (index === undefined) break; //no next index found
-      if (index === initialIndex) break; //avoid infinite loop !
+      if ( (firstFoundIndex !== undefined) && (index === firstFoundIndex) ) break; //avoid infinite loop !
+
+      //keep a track of the first match found; so we can avoid an infinite loop later
+      if (firstFoundIndex === undefined){
+        firstFoundIndex = index;
+      }
 
       //ignore non-playable URLs (keep iterating)
       const nextUrl = props.urls[index];
@@ -108,28 +124,42 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (index===undefined) return;
 
+    const firstIndex = getNextPlayableIndex(undefined);
     let newIndex = props.urls.indexOf(url);
-    newIndex = (newIndex !== -1) ? newIndex : 0;
+    newIndex = (newIndex !== -1) ? newIndex : firstIndex;
     setIndex(newIndex);
 
   }, [props.urls]);
 
   //update index when prop changes
   useEffect(() => {
-    if (props.index === undefined) return;
-    setIndex(parseInt(props.index));
+    if (props.index !== undefined){
+      setIndex(props.index);
+    }
   }, [props.index]);
 
+  //if index is not defined; use first entry
   useEffect(() => {
-    //update URL when index changes
-    const url = props.urls[index];
-    setUrl(url);
+    if ( !props.urls[index] ){
+      const firstIndex = getNextPlayableIndex(undefined);
+      setIndex(firstIndex);
+    }
+  }, [index]);
 
-    //tell parent index has changed
+  //tell parent index has changed
+  useEffect(() => {
     if (typeof props.onIndex === 'function') {
       props.onIndex(index);
     }
-  }, [index,props.urls]);
+  }, [index]);
+
+  //update URL when index changes
+  useEffect(() => {
+    if (index === undefined) return;
+    const url = props.urls[index];
+    setUrl(url);
+
+  }, [index]);
 
   //sort non-playable URLs when urls prop is updated
   useEffect(() => {
