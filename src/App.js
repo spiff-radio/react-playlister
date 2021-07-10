@@ -51,7 +51,7 @@ function App() {
 
   const handleUpdateUrls = (e) => {
     e.preventDefault();
-    let arr = inputRef.current.value.split('\n');
+    let arr = JSON.parse(inputRef.current.value);
     arr = arr.filter(item => item);//remove empty values
     setUrls(arr);
   }
@@ -71,7 +71,7 @@ function App() {
         <textarea
         ref={inputRef}
         >
-        {urls.join("\n") }
+        {JSON.stringify(urls,null,2) }
         </textarea>
         <p>
           <button
@@ -95,19 +95,24 @@ function App() {
       {
         playlistRef.current &&
           <div id="controls">
+
             <p>
-              <strong>current source</strong>
-              <span>#{index}</span><br/>
+              <strong>current source url</strong>
               <span>{url}</span>
             </p>
 
             <p>
-              <strong>unplayable URLs</strong>
+              <strong>current source key</strong>
+              <span>#{index}</span>
+            </p>
+
+            <p>
+              <strong>ignored URLs</strong>
               <span>{ignoredUrls.join(", ")}</span>
             </p>
 
             <p>
-              <strong>unplayable URL keys</strong>
+              <strong>ignored URL keys</strong>
               <span>{ignoredUrlKeys.join(", ")}</span>
             </p>
 
