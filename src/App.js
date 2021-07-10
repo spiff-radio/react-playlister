@@ -9,19 +9,28 @@ function App() {
   const inputRef = useRef();
 
   const [urls, setUrls] = useState([
-    'https://www.youtube.com/watch?v=ysz5S6PUM-U',
-    'https://www.youtube.com/watch?v=K5LU8K7ZK34',
-    'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends',
-    'https://www.kiki.com',
-    'https://www.youtube.com/watch?v=NwMOpaxroTg',
-    'https://www.caca.com'
+    'https://www.youtube.com/watch?v=E11DAkrjlP8',
+    [
+      'https://www.youtube.com/watch?v=K5LU8K7ZK34',
+      'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends'
+    ],
+    [
+      'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
+      'https://www.youtube.com/watch?v=i0PD1nVz0kA',
+      'https://www.youtube.com/watch?v=v3RTs0LCc-8'
+    ],
+    'https://www.notplayable.com',
+    'https://www.notplayable.com',
+    'https://www.notplayableeither.com',
+    'https://www.youtube.com/watch?v=Q4zJrX5u0Bw',
+
   ]);
 
   const [loop, setLoop] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const [index, setIndex] = useState(0);//current url index
+  const [indexGUI, setIndexGUI] = useState(0);//current url index
   const [url, setUrl] = useState();//current url
   const [ignoredUrls,setIgnoredUrls] = useState(); //non-playable URLs
   const [ignoredUrlKeys,setIgnoredUrlKeys] = useState(); //non-playable URLs
@@ -38,8 +47,11 @@ function App() {
 
   const handleIndex = (index) => {
     console.log("handleIndex",index);
-    const url = urls[index];
-    setIndex(index);
+    const url = playlistRef.current.getCurrentUrl();
+
+    index = Array.isArray(index) ? '['+index.join(',')+']' : index;
+
+    setIndexGUI(index);
     setUrl(url);
   }
 
@@ -103,7 +115,7 @@ function App() {
 
             <p>
               <strong>current source key</strong>
-              <span>#{index}</span>
+              <span>{indexGUI}</span>
             </p>
 
             <p>
