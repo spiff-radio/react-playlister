@@ -5,9 +5,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
 
+  const [flatUrls,setFlatUrls] = useState();//flattened array of urls
+  const [urlMap,setUrlMap] = useState();//relationship between props.urls and flatUrls
   const [unplayableUrls,setUnplayableUrls] = useState([]);//list of unplayable URLs
 
   const [index, setIndex] = useState(props.index);//current url index
+
+
   const [url, setUrl] = useState();//current url
   const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
   const [hasNext,setHasNext] = useState(true);//can we play the next track ?
@@ -105,6 +109,51 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
   }
+
+  useEffect(() => {
+
+    const buildNeedles = (array) => {
+      return array.flatMap(
+        (v, i) => Array.isArray(v) ? buildNeedles(v).map(a => [i, ...a]) : [[i]]
+      );
+    }
+
+    //flatten all the URLs
+    const flatUrls = props.urls.flat(Infinity);
+    setFlatUrls(flatUrls);
+
+    //build a one-level array of "needles" to retrieve the URLs in the nested array
+    //based on their indexes (eg. [1,5])
+    const urlMap = buildNeedles(props.urls);
+    setUrlMap(urlMap);
+
+  }, [props.urls]);
+
+  useEffect(() => {
+    console.log("FLAT",flatUrls);
+  }, [flatUrls]);
+
+  /*
+  useEffect(() => {
+    if (!urlMap || !flatUrls) return;
+    console.log("MAP",urlMap);
+
+    //get value in array using a needle, which is an array of indexes
+    const getValueWithNeedle = (array,indexes) => {
+      const children = array[indexes[0]];
+
+      if(indexes.length > 1){
+        return getValueWithNeedle(children,indexes.slice(1));
+      }else{
+        return children;
+      }
+    }
+
+    const needle = urlMap[4];
+    console.log("CHECK YO",needle,getValueWithNeedle(props.urls,needle));
+
+  }, [urlMap]);
+  */
 
   //if any, update current index when urls prop is updated (url could have moved within array)
   useEffect(() => {
