@@ -11,82 +11,68 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [url, setUrl] = useState();//current url
   const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
   const [hasNext,setHasNext] = useState(true);//can we play the next track ?
-  const [reverse,setReverse] = useState(false);//do we iterate URLs backwards ?
+  const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
-  const getNextPlayableIndex = (index,loop,reverse) => {
+  const getNextPlayableUrlIndex = (index,loop,backwards) => {
 
-    const getNextIndex = (index,loop,reverse) => {
+    const getNextPlayableUrlIndexes = (index,loop,backwards) => {
 
-      if (!props.urls.length) return;
-      if (index === undefined) return 0;
+      //build a queue of keys based on an array
+      //If index is NOT defined, it will return the full array.
+      const getQueueKeys = (array,index,loop,backwards) => {
+        const allKeys =  [...array.keys()];//array of keys
+        let previousKeys = [];
+        let nextKeys = [];
+        let keysQueue = [];
 
-      let newIndex;
-      let endIndex = props.urls.length-1;
+        if (index){
+          var nextIndex = index+1;
 
-      if (!reverse){
-        newIndex = index+1;
-
-        if (index === endIndex){
-          if (props.loop){
-            return 0;
-          }else{
-            return;
+          if (nextIndex < allKeys.length){
+            nextKeys = allKeys.slice(nextIndex);
           }
+
+          if (index > 0){
+            previousKeys = allKeys.slice(0,index);
+          }
+
+        }else{
+          nextKeys = allKeys;
         }
 
-        return newIndex;
-      }else{
-        newIndex = index-1;
-
-        if (index === 0){
-          if (props.loop){
-            return endIndex;
-          }else{
-            return;
-          }
+        if (loop){
+          nextKeys = previousKeys = nextKeys.concat(previousKeys);
         }
 
-        return newIndex;
-      }
-    }
+        if (backwards === true){
+          keysQueue = previousKeys.reverse();
+        }else{
+          keysQueue = nextKeys;
+        }
 
-    const initialIndex = index;
-    let firstFoundIndex;
-    let newIndex;
+        /*
+        console.log(
+          !backwards ? 'GET NEXT INDEXES' : 'GET PREVIOUS INDEXES',
+          keysQueue
+        )
+        */
 
-    while ( newIndex===undefined )  {
-
-      index = getNextIndex(index,loop,reverse);
-
-      /*
-      console.log("Iterate for #"+initialIndex,{
-        'index':index,
-        'loop':loop,
-        'reverse':reverse,
-        'iteration':iteration
-      })
-      */
-
-      if (index === undefined) break; //no next index found
-      if ( (firstFoundIndex !== undefined) && (index === firstFoundIndex) ) break; //avoid infinite loop !
-
-      //keep a track of the first match found; so we can avoid an infinite loop later
-      if (firstFoundIndex === undefined){
-        firstFoundIndex = index;
+        return keysQueue;
       }
 
-      //ignore non-playable URLs (keep iterating)
-      const nextUrl = props.urls[index];
-      const nextPlayable = !unplayableUrls.includes(nextUrl);
-      if (!nextPlayable) continue;
+      const queue = getQueueKeys(props.urls,index,loop,backwards);
 
-      newIndex = index;
+      const playableQueue = queue.filter(function (key) {
+        const url = props.urls[key];
+        return !unplayableUrls.includes(url);
+      });
 
+      return playableQueue;
     }
 
-    return newIndex;
-
+    const queue = getNextPlayableUrlIndexes(index,loop,backwards);
+    return queue[0];
   }
 
   const appendUnplayableUrl = (url) => {
@@ -97,7 +83,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const handleReady = () => {
-    setReverse(false);//if we were skipping backwards, resets it.
+    setBackwards(false);//if we were skipping backwards, resets it.
     if (typeof props.onReady === 'function') {
       props.onReady();
     }
@@ -112,7 +98,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //skip automatically if the player is playing
     if (props.playing && props.autoskip){
-      const newIndex = getNextPlayableIndex(index,props.loop,reverse);
+      const newIndex = getNextPlayableUrlIndex(index,props.loop,backwards);
       if (newIndex !== undefined){
         setIndex(newIndex);
       }
@@ -124,7 +110,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (index===undefined) return;
 
-    const firstIndex = getNextPlayableIndex(undefined);
+    const firstIndex = getNextPlayableUrlIndex(undefined);
     let newIndex = props.urls.indexOf(url);
     newIndex = (newIndex !== -1) ? newIndex : firstIndex;
     setIndex(newIndex);
@@ -141,7 +127,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //if index is not defined; use first entry
   useEffect(() => {
     if ( !props.urls[index] ){
-      const firstIndex = getNextPlayableIndex(undefined);
+      const firstIndex = getNextPlayableUrlIndex(undefined);
       setIndex(firstIndex);
     }
   }, [index]);
@@ -174,8 +160,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update previous/next controls
   useEffect(() => {
-    setHasPrevious( (getNextPlayableIndex(index,props.loop,true) !== undefined) );
-    setHasNext( (getNextPlayableIndex(index,props.loop,false) !== undefined) );
+    setHasPrevious( (getNextPlayableUrlIndex(index,props.loop,true) !== undefined) );
+    setHasNext( (getNextPlayableUrlIndex(index,props.loop,false) !== undefined) );
   }, [index,unplayableUrls,props.loop]);
 
   //let know parent if we can go backward
@@ -220,15 +206,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref,
       () => ({
         previous() {
-          setReverse(true);
-          const newIndex = getNextPlayableIndex(index,props.loop,true);
+          setBackwards(true);
+          const newIndex = getNextPlayableUrlIndex(index,props.loop,true);
           if (newIndex !== undefined){
             setIndex(newIndex);
           }
         },
         next() {
-          setReverse(false);
-          const newIndex = getNextPlayableIndex(index,props.loop,false);
+          setBackwards(false);
+          const newIndex = getNextPlayableUrlIndex(index,props.loop,false);
           if (newIndex !== undefined){
             setIndex(newIndex);
           }
