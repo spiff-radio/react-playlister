@@ -37,17 +37,43 @@
   }
 }
 
-
-#inputPlaylist{
+#feedback{
+  display:flex;
   padding:2em;
   position:relative;
-  textarea{
-    width:100%;
-    min-height:15em;
+  min-height:15em;
+  >*{
+    flex:auto;
+    flex-basis:50%;
     padding:2em;
-    box-sizing:border-box;
+    border:1px solid #CCC;
+  }
+  #input{
+    textarea{
+      border:none;
+      width:100%;
+      height:100%;
+
+      box-sizing:border-box;
+      line-height:1.2em;
+    }
+  }
+  #output{
+    padding:2em;
+    text-align:left;
+    ul{
+      padding:1.2em;
+      margin:0;
+      li{
+        line-height:1.2em;
+        ul{
+          padding:1.2em 2em;
+        }
+      }
+    }
   }
 }
+
 
 #controls{
 

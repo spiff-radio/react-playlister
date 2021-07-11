@@ -3,12 +3,48 @@ import './App.scss';
 import React, { useState, useEffect, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 
+const ReactPlaylistUrl = props => {
+  return(
+    <>
+    {props.url}
+    </>
+  );
+}
+
+const ReactPlaylistTrack = props => {
+
+  if (Array.isArray(props.track)){
+    return (
+        <ul>
+        {
+          props.track.map((url,urlKey) => {
+            return(
+              <li key={urlKey}>
+                <ReactPlaylistUrl
+                url={url}
+                />
+              </li>
+            )
+          })
+        }
+        </ul>
+    );
+  }else{
+    return(
+      <ReactPlaylistUrl
+      url={props.track}
+      />
+    )
+  }
+
+}
+
 function App() {
 
   const playlistRef = useRef();
   const inputRef = useRef();
 
-  const [urls, setUrls] = useState([
+  const [playlist, setUrls] = useState([
     'https://www.youtube.com/watch?v=E11DAkrjlP8',
     [
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
@@ -26,14 +62,14 @@ function App() {
 
   ]);
 
-  const [loop, setLoop] = useState(false);
+  const [loop, setLoop] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const [indexGUI, setIndexGUI] = useState(0);//current url index
+  const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
   const [url, setUrl] = useState();//current url
-  const [ignoredUrls,setIgnoredUrls] = useState(); //non-playable URLs
-  const [ignoredUrlKeys,setIgnoredUrlKeys] = useState(); //non-playable URLs
+  const [ignoredUrls,setIgnoredUrls] = useState([]); //non-playable URLs
+  const [ignoredUrlKeys,setIgnoredUrlKeys] = useState([]); //non-playable URLs
   const [hasPrevious,setHasPrevious] = useState();
   const [hasNext,setHasNext] = useState();
 
@@ -49,9 +85,7 @@ function App() {
     console.log("handleIndex",index);
     const url = playlistRef.current.getCurrentUrl();
 
-    index = Array.isArray(index) ? '['+index.join(',')+']' : index;
-
-    setIndexGUI(index);
+    setTrackIndexGUI(index);
     setUrl(url);
   }
 
@@ -68,34 +102,53 @@ function App() {
     setUrls(arr);
   }
 
-  const handleIgnoredUrls = (obj) => {
-    const keys = Object.keys(obj);
-    setIgnoredUrlKeys(keys);
+  const handleIgnoredUrls = (ignoredUrls) => {
+    setIgnoredUrls(ignoredUrls);
+  }
 
-    let urls = Object.values(obj);
-    urls = [...new Set(urls)];//make unique
-    setIgnoredUrls(urls);
+  const handleIgnoredKeys = (ignoredKeys) => {
+    const output = ignoredKeys.map(function(arr) {
+      return '['+arr.join(",")+']';
+    });
+    setIgnoredUrlKeys(output);
   }
 
   return (
     <div className="App">
-      <div id="inputPlaylist">
-        <textarea
-        ref={inputRef}
-        >
-        {JSON.stringify(urls,null,2) }
-        </textarea>
-        <p>
-          <button
-          onClick={handleUpdateUrls}
-          >update</button>
-        </p>
-
+      <div id="feedback">
+      <div id="input">
+      <textarea
+      ref={inputRef}
+      >
+      {JSON.stringify(playlist,null,2) }
+      </textarea>
       </div>
+        <div id="output">
+          <ul>
+          {
+
+            playlist.map((track,trackKey) => {
+              return (
+                <li key={trackKey}>
+                  <ReactPlaylistTrack
+                  track={track}
+                  />
+                </li>
+              );
+            })
+          }
+          </ul>
+        </div>
+      </div>
+      <p>
+        <button
+        onClick={handleUpdateUrls}
+        >update</button>
+      </p>
       <ReactPlaylister
       ref={playlistRef}
-      index={2}
-      urls={urls}
+      index={0}
+      playlist={playlist}
       playing={playing}
       loop={loop}
       autoskip={autoskip}
@@ -103,19 +156,20 @@ function App() {
       onToggleNext={handleToggleNext}
       onIndex={handleIndex}
       onIgnoredUrls={handleIgnoredUrls}
+      onIgnoredKeys={handleIgnoredKeys}
       />
       {
         playlistRef.current &&
           <div id="controls">
 
             <p>
-              <strong>current source url</strong>
-              <span>{url}</span>
+              <strong>current track key</strong>
+              <span>{trackIndexGUI}</span>
             </p>
 
             <p>
-              <strong>current source key</strong>
-              <span>{indexGUI}</span>
+              <strong>current source url</strong>
+              <span>{url}</span>
             </p>
 
             <p>
@@ -125,7 +179,10 @@ function App() {
 
             <p>
               <strong>ignored URL keys</strong>
-              <span>{ignoredUrlKeys.join(", ")}</span>
+              <span>{
+                //URGENT
+                ignoredUrlKeys.join(", ")
+              }</span>
             </p>
 
             <p>
@@ -146,14 +203,14 @@ function App() {
 
             <p>
               <button
-              onClick={(e) => playlistRef.current.previous()}
+              onClick={(e) => playlistRef.current.previousTrack()}
               disabled={!hasPrevious}
               >Previous</button>
             </p>
 
             <p>
               <button
-              onClick={(e) => playlistRef.current.next()}
+              onClick={(e) => playlistRef.current.nextTrack()}
               disabled={!hasNext}
               >Next</button>
             </p>

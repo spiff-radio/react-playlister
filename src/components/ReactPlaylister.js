@@ -7,12 +7,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //const [flatUrls,setFlatUrls] = useState();//flattened array of urls
   //const [urlMap,setUrlMap] = useState();//"needles" for flatUrls
-  const [unplayableUrls,setUnplayableUrls] = useState([]);//list of unplayable URLs
-
-  const [index, setIndex] = useState(props.index);//current url index
-
-
+  const [playlist,setPlaylist] = useState([]);//all URLs as arrays
+  const [track,setTrack] = useState([]);//current array of URLs
   const [url, setUrl] = useState();//current url
+
+  const [ignoredUrls,setIgnoredUrls] = useState([]);//list of unplayable URLs
+  const [ignoredKeys,setIgnoredKeys] = useState([]);//list of unplayable URLs; as a list of indices
+
+  const [trackIndex, setTrackIndex] = useState(props.index);
+  const [urlIndex, setUrlIndex] = useState(0);
+
   const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
   const [hasNext,setHasNext] = useState(true);//can we play the next track ?
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
@@ -30,7 +34,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         let nextKeys = [];
         let keysQueue = [];
 
-        if (index){
+        if (index !== undefined){
           var nextIndex = index+1;
 
           if (nextIndex < allKeys.length){
@@ -55,26 +59,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           keysQueue = nextKeys;
         }
 
-        /*
-        console.log(
-          !backwards ? 'GET NEXT INDEXES' : 'GET PREVIOUS INDEXES',
-          keysQueue
-        )
-        */
-
         return keysQueue;
       }
 
-      const queue = getQueueKeys(props.urls,index,loop,backwards);
+      const queueKeys = getQueueKeys(playlist,index,loop,backwards);
+      const playableQueueKeys = queueKeys.filter(function (key) {
 
-      const playableQueue = queue.filter(function (key) {
+        const track = playlist[key];
 
-        //force array
-        let urls = [].concat(props.urls[key] || []);
-
-        //check every url for this item
-        const playableUrls = urls.filter(function (url) {
-          return !unplayableUrls.includes(url);
+        //check every url for this track
+        const playableUrls = track.filter(function (url) {
+          return !ignoredUrls.includes(url);
         });
 
         const canPlay = (playableUrls.length > 0);
@@ -82,18 +77,28 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return (playableUrls.length > 0);
       });
 
-      return playableQueue;
+      /*
+      console.log("PLAYABLE QUEUE FOR #"+index,playableQueueKeys,{
+        'playlist':playlist,
+        'index':index,
+        'loop':loop,
+        'backwards':backwards
+      });
+      */
+
+      return playableQueueKeys;
     }
 
-    const queue = getNextPlayableIndexes(index,loop,backwards);
+    const queue = getNextPlayableIndexes(trackIndex,loop,backwards);
+
     return queue[0];
   }
 
   const appendUnplayableUrl = (url) => {
-    let urls = [...unplayableUrls];
+    let urls = [...ignoredUrls];
     urls.push(url);
     urls = [...new Set(urls)];//make unique
-    setUnplayableUrls(urls);
+    setIgnoredUrls(urls);
   }
 
   const handleReady = () => {
@@ -112,47 +117,54 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //skip automatically if the player is playing
     if (props.playing && props.autoskip){
-      const newIndex = getNextPlayableIndex(index,props.loop,backwards);
+      const newIndex = getNextPlayableIndex(trackIndex,props.loop,backwards);
       if (newIndex !== undefined){
-        setIndex(newIndex);
+        setTrackIndex(newIndex);
       }
     }
 
   }
 
-  //sort non-playable URLs when urls prop is updated
+  //build playlist
+  //forces every track to be an array
   useEffect(() => {
 
-    const flatUrls = props.urls.flat(Infinity);
+    const playlist = props.playlist.map(function(track) {
+      return [].concat(track || []);//force array
+    });
+    setPlaylist(playlist);
+
+  }, [props.playlist]);
+
+  //sort non-playable URLs when playlist is updated
+  useEffect(() => {
+
+    const flatUrls = playlist.flat(Infinity);
 
     let playable = flatUrls.filter(ReactPlayer.canPlay);
     let unplayable = flatUrls.filter(x => !playable.includes(x));
 
     unplayable = [...new Set(unplayable)];//make unique
-    setUnplayableUrls(unplayable);
+    setIgnoredUrls(unplayable);
 
-  }, [props.urls]);
+  }, [playlist]);
 
   /*
   useEffect(() => {
 
-    console.log("ALL URLS",props.urls);
+    console.log("ALL URLS",playlist);
 
     let primaryUrls = [];
     let secondaryUrls = [];
 
-    for (let i = 0; i < props.urls.length; i++) {
-      const item = props.urls[i];
+    for (let i = 0; i < playlist.length; i++) {
+      const item = playlist[i];
       let primaryUrl;
       let secondaryUrl;
 
-      if ( Array.isArray(item) ){
-        if (!item.length) continue;
-        primaryUrl = item[0]; //first one
-        secondaryUrl = item.slice(1); //all the others
-      }else{
-        primaryUrl = item;
-      }
+      if (!item.length) continue;
+      primaryUrl = item[0]; //first one
+      secondaryUrl = item.slice(1); //all the others
 
       primaryUrls.push(primaryUrl);
       secondaryUrls.push(secondaryUrl);
@@ -162,7 +174,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("PRIMARY",primaryUrls);
     console.log("SECONDARY",secondaryUrls);
 
-  }, [props.urls]);
+  }, [playlist]);
 
   */
 
@@ -177,15 +189,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //flatten all the URLs
-    const flatUrls = props.urls.flat(Infinity);
+    const flatUrls = playlist.flat(Infinity);
     setFlatUrls(flatUrls);
 
     //build a one-level array of "needles" to retrieve the URLs in the nested array
     //based on their indexes (eg. [1,5])
-    const urlMap = buildNeedles(props.urls);
+    const urlMap = buildNeedles(playlist);
     setUrlMap(urlMap);
 
-  }, [props.urls]);
+  }, [playlist]);
 
 
   useEffect(() => {
@@ -209,7 +221,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     const needle = urlMap[4];
-    console.log("CHECK YO",needle,getValueWithNeedle(props.urls,needle));
+    console.log("CHECK YO",needle,getValueWithNeedle(playlist,needle));
 
   }, [urlMap]);
   */
@@ -217,58 +229,68 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //if any, update current index when urls prop is updated (url could have moved within array)
   /*
   useEffect(() => {
-    if (index===undefined) return;
+    if (trackIndex===undefined) return;
 
     const firstIndex = getNextPlayableIndex(undefined);
-    let newIndex = props.urls.indexOf(url);
+    let newIndex = playlist.indexOf(url);
     newIndex = (newIndex !== -1) ? newIndex : firstIndex;
-    setIndex(newIndex);
+    setTrackIndex(newIndex);
 
-  }, [props.urls]);
+  }, [playlist]);
   */
 
   //update index when prop changes
   useEffect(() => {
     if (props.index !== undefined){
-      setIndex(props.index);
+      setTrackIndex(props.index);
     }
   }, [props.index]);
 
   //if index is not defined; use first entry
   /*
   useEffect(() => {
-    if ( !props.urls[index] ){
+    if ( !playlist[trackIndex] ){
       const firstIndex = getNextPlayableIndex(undefined);
-      setIndex(firstIndex);
+      setTrackIndex(firstIndex);
     }
-  }, [index]);
+  }, [trackIndex]);
   */
 
   //tell parent index has changed
   useEffect(() => {
     if (typeof props.onIndex === 'function') {
-      props.onIndex(index);
+      props.onIndex(trackIndex);
     }
-  }, [index]);
+  }, [trackIndex]);
 
-  //update URL when index changes
+  //update track when playlist trackIndex changes
   useEffect(() => {
-    if (index === undefined) return;
+    if (!playlist.length) return;
+    if (trackIndex === undefined) return;
 
-    console.log("NEW INDEX",index);
+    console.log("NEW INDEX",trackIndex);
+    console.log(playlist);
 
-    //force array
-    let urls = [].concat(props.urls[index] || []);
+    setTrack(playlist[trackIndex]);
 
-    setUrl(urls);
+  }, [trackIndex,playlist]);
 
-  }, [index]);
+  useEffect(() => {
+    if (track === undefined) return;
+
+    console.log("SET TRACK",track);
+
+    const url = track[0]; //TOUFIX URGENT
+
+    setUrl(url);
+
+  }, [track]);
 
   //update previous/next controls
   useEffect(() => {
-    setHasPrevious( (getNextPlayableIndex(index,props.loop,true) !== undefined) );
-    setHasNext( (getNextPlayableIndex(index,props.loop,false) !== undefined) );
-  }, [index,unplayableUrls,props.loop]);
+    setHasPrevious( (getNextPlayableIndex(trackIndex,props.loop,true) !== undefined) );
+    setHasNext( (getNextPlayableIndex(trackIndex,props.loop,false) !== undefined) );
+  }, [trackIndex,ignoredUrls,props.loop]);
 
   //let know parent if we can go backward
   useEffect(() => {
@@ -284,45 +306,84 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
   }, [hasNext]);
 
+  //build a list of ignored URLs, as an array of indices
+  useEffect(() => {
+
+    //Copy of the playlist array; where playable URLs = false
+    const blacklisted = [...playlist].map(function(track) {
+      return track.map(function(url) {
+        return ignoredUrls.includes(url) ? url : false;
+      });
+    });
+
+    //build a one-level array of "needles" to retrieve the URLs in the nested array
+    //based on their indexes (eg. [1,5])
+    const buildNeedles = (array) => {
+      return array.flatMap(
+        (v, i) => Array.isArray(v) ? buildNeedles(v).map(a => [i, ...a]) : [[i]]
+      );
+    }
+    let blacklistedKeys = buildNeedles(blacklisted);
+
+    //get value in array using a needle, which is an array of indexes
+    const getValueWithNeedle = (array,indexes) => {
+      const children = array[indexes[0]];
+
+      if(indexes.length > 1){
+        return getValueWithNeedle(children,indexes.slice(1));
+      }else{
+        return children;
+      }
+    }
+
+    //remove items that are playable (their is FALSE)
+    blacklistedKeys = blacklistedKeys.filter(function (indices) {
+      const value = getValueWithNeedle(blacklisted,indices);
+      return (value !== false);
+    });
+
+    setIgnoredKeys(blacklistedKeys);
+
+  }, [ignoredUrls]);
+
+  //when non-playable indices are updated; warn parent
+  useEffect(() => {
+
+    if (typeof props.onIgnoredKeys === 'function') {
+      props.onIgnoredKeys(ignoredKeys);
+    }
+
+  }, [ignoredKeys]);
+
   //when non-playable URLs are updated; return an object of ignored keys=>urls to the parent
   useEffect(() => {
 
-    const getIgnoredUrlsObj = () => {
-      let urlsObj = Object.assign({},props.urls);//array to object
-      let output = {};
-
-      for (const [key, url] of Object.entries(urlsObj)) {
-        if ( unplayableUrls.includes(url) ){
-          output[key] = url;
-        }
-      }
-      return output;
-    }
-
     if (typeof props.onIgnoredUrls === 'function') {
-      const ignored = getIgnoredUrlsObj();
-      props.onIgnoredUrls(ignored);
+      props.onIgnoredUrls(ignoredUrls);
     }
 
-  }, [unplayableUrls]);
+  }, [ignoredUrls]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
   useImperativeHandle(
       ref,
       () => ({
-        previous() {
+        previousTrack() {
           setBackwards(true);
-          const newIndex = getNextPlayableIndex(index,props.loop,true);
+          const newIndex = getNextPlayableIndex(trackIndex,props.loop,true);
           if (newIndex !== undefined){
-            setIndex(newIndex);
+            setTrackIndex(newIndex);
           }
         },
-        next() {
+        nextTrack() {
           setBackwards(false);
-          const newIndex = getNextPlayableIndex(index,props.loop,false);
+          const newIndex = getNextPlayableIndex(trackIndex,props.loop,false);
+
+          console.log("NEXT INDEX",newIndex);
+
           if (newIndex !== undefined){
-            setIndex(newIndex);
+            setTrackIndex(newIndex);
           }
         },
         getCurrentUrl(){
