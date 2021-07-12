@@ -50,72 +50,101 @@ function App() {
   const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
   const [ignoredUrlKeysGUI,setIgnoredUrlKeysGUI] = useState(); //non-playable keys - as a string
 
-  const ReactPlaylistUrl = props => {
+  const ReactPlaylistFeedBack = props => {
 
-    //TOUFIX URGENT uses references SO does not work for now
-    const playable = !ignoredUrlKeys.includes(props.index);
+    //since we rely on playlistRef.current.isPlayableUrl & playlistRef.current.isPlayableTrack to know if the items are playable,
+    //force refresh component when ignoredUrlKeys is updated.
+    const [updateCount,setUpdateCount] = useState(0);
 
-    console.log("CHECK PLAYABLE",props.index,ignoredUrlKeys);
+    useEffect(() => {
+      setUpdateCount(updateCount+1);
+    }, [ignoredUrlKeys]);
 
-    return(
-      <span
-      className={
-        classNames({
-          url:true,
-          playable:playable
-        })
-      }
-      >
-      {props.url} - {printIndex(props.index)}
-      </span>
-    );
-  }
+    const ReactPlaylistUrl = props => {
 
-  const ReactPlaylistTrack = props => {
+      const playable = playlistRef.current.isPlayableUrl(props.url);
 
-    let inner;
-
-    if (Array.isArray(props.track)){
-      inner = (
-          <ul>
-          {
-            props.track.map((url,urlKey) => {
-              return(
-                <li key={urlKey}>
-                  <ReactPlaylistUrl
-                  url={url}
-                  index={[props.index,urlKey]}
-                  />
-                </li>
-              )
-            })
-          }
-          </ul>
+      return(
+        <span
+        className={
+          classNames({
+            url:true,
+            playable:playable
+          })
+        }
+        >
+        {props.url} - {printIndex(props.index)}
+        </span>
       );
-    }else{
-      inner = (
-        <ReactPlaylistUrl
-        url={props.track}
-        index={props.index}
-        playlistRef={props.playlistRef}
-        />
-      )
     }
 
-    const playable = !ignoredUrlKeys.includes(props.index);
+    const ReactPlaylistTrack = props => {
 
-    return (
-      <span
-      className={
-        classNames({
-          track:true,
-          playable:playable
-        })
+      let inner;
+
+      if (Array.isArray(props.track)){
+        inner = (
+            <ul>
+            {
+              props.track.map((url,urlKey) => {
+                return(
+                  <li key={urlKey}>
+                    <ReactPlaylistUrl
+                    url={url}
+                    index={[props.index,urlKey]}
+                    />
+                  </li>
+                )
+              })
+            }
+            </ul>
+        );
+      }else{
+        inner = (
+          <ReactPlaylistUrl
+          url={props.track}
+          index={props.index}
+          playlistRef={props.playlistRef}
+          />
+        )
       }
-      >
-        {inner}
-      </span>
 
+      const playable = playlistRef.current.isPlayableTrack(props.track);
+
+      return (
+        <span
+        className={
+          classNames({
+            track:true,
+            playable:playable
+          })
+        }
+        >
+          {inner}
+        </span>
+
+      );
+
+    }
+
+    return(
+      <ul key={updateCount}>
+      {
+        playlistRef.current &&
+          playlist.map((track,trackKey) => {
+            return (
+              <li
+              key={trackKey}
+              >
+                <ReactPlaylistTrack
+                index={trackKey}
+                track={track}
+                />
+              </li>
+            );
+          })
+      }
+      </ul>
     );
 
   }
@@ -176,23 +205,9 @@ function App() {
       </textarea>
       </div>
         <div id="output">
-          <ul>
-          {
-            playlistRef.current &&
-              playlist.map((track,trackKey) => {
-                return (
-                  <li
-                  key={trackKey}
-                  >
-                    <ReactPlaylistTrack
-                    index={trackKey}
-                    track={track}
-                    />
-                  </li>
-                );
-              })
-          }
-          </ul>
+          <ReactPlaylistFeedBack
+          playlist={playlist}
+          />
         </div>
       </div>
       <p>
@@ -250,6 +265,14 @@ function App() {
               <span>{playing ? 'true' : 'false'}</span>
               <button
               onClick={(e) => setPlaying(!playing)}
+              >toggle</button>
+            </p>
+
+            <p>
+              <strong>autoskip</strong>
+              <span>{autoskip ? 'true' : 'false'}</span>
+              <button
+              onClick={(e) => setAutoskip(!autoskip)}
               >toggle</button>
             </p>
 

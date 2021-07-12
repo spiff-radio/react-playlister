@@ -98,18 +98,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
 
       const queueKeys = getQueueKeys(playlist,index,loop,backwards);
+
       const playableQueueKeys = queueKeys.filter(function (key) {
-
         const track = playlist[key];
-
-        //check every url for this track
-        const playableUrls = track.filter(function (url) {
-          return !ignoredUrls.includes(url);
-        });
-
-        const canPlay = (playableUrls.length > 0);
-
-        return (playableUrls.length > 0);
+        const playable = isPlayableTrack(track);
+        return playable;
       });
 
       /*
@@ -120,6 +113,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         'backwards':backwards
       });
       */
+
 
       return playableQueueKeys;
     }
@@ -134,6 +128,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     urls.push(url);
     urls = [...new Set(urls)];//make unique
     setIgnoredUrls(urls);
+  }
+
+  const isPlayableUrl = url => {
+    return !ignoredUrls.includes(url);
+  }
+
+  const isPlayableTrack = track => {
+      //our track might be a single URL or a set of URLs
+      const urls = [].concat(track || []);//force array
+
+      let playableUrls = urls.filter(x => isPlayableUrl(x));
+
+      return (playableUrls.length > 0);
+
   }
 
   const handleReady = () => {
@@ -287,8 +295,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (trackIndex === undefined) return;
 
     console.log("NEW INDEX",trackIndex);
-    console.log(playlist);
-
     setTrack(playlist[trackIndex]);
 
   }, [trackIndex,playlist]);
@@ -328,15 +334,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     //Copy of the props.playlist array; where playable URLs = false
     const playable = [...props.playlist].map(function(track) {
-      const isPlayable = (url) => {
-        return ignoredUrls.includes(url) ? false : true;
-      }
+
       if ( Array.isArray(track) ){
         return track.map(function(url) {
-          return isPlayable(url);
+          return isPlayableUrl(url);
         });
       }else{
-        return isPlayable(track);
+        return isPlayableTrack(track);
       }
     });
 
@@ -411,10 +415,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             setTrackIndex(newIndex);
           }
         },
-        isPlayable(index){
-          const playable = getValueWithNeedle(playableData,index);
-          console.log('CHECK IS PLAYABLE FOR INDEX / IN',index,playable,playableData);
-          return playable;
+        isPlayableUrl(url){
+          return isPlayableUrl(url);
+        },
+        isPlayableTrack(track){
+          return isPlayableTrack(url);
         },
         getCurrentUrl(){
           return url;
