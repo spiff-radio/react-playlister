@@ -1,6 +1,40 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
 
+//get value in array using a needle
+const getValueWithNeedle = (array,indices) => {
+  indices = !Array.isArray(indices) ? [indices] : indices;
+
+  const children = array[indices[0]];
+  if (children === undefined) return;
+
+  if(indices.length > 1){
+    return getValueWithNeedle(children,indices.slice(1));
+  }else{
+    return children;
+  }
+}
+
+//build a one-level array of "needles" based on an multidimensional input array
+const buildNeedles = (array) => {
+
+  const buildIterableNeedles = (array) => {
+    return array.flatMap(
+      (v, i) => Array.isArray(v) ? buildIterableNeedles(v).map(a => [i, ...a]) : [[i]]
+    );
+  }
+
+  const iterableNeedles = buildIterableNeedles(array);
+
+  //replace the needles depending of the original value being (or not) an array;
+  return iterableNeedles.map(function(indices) {
+    const firstKey = indices[0];
+    const initialValue = array[firstKey];
+    return Array.isArray(initialValue) ? indices : firstKey;
+  });
+
+}
+
 export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
@@ -8,6 +42,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //const [flatUrls,setFlatUrls] = useState();//flattened array of urls
   //const [urlMap,setUrlMap] = useState();//"needles" for flatUrls
   const [playlist,setPlaylist] = useState([]);//all URLs as arrays
+  const [playableData,setPlayableData] = useState([]);//clone of props.playlist where values are replaced by the item being (or not) playable
   const [track,setTrack] = useState([]);//current array of URLs
   const [url, setUrl] = useState();//current url
 
@@ -17,8 +52,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [trackIndex, setTrackIndex] = useState(props.index);
   const [urlIndex, setUrlIndex] = useState(0);
 
-  const [hasPrevious,setHasPrevious] = useState(true);//can we play the previous track ?
-  const [hasNext,setHasNext] = useState(true);//can we play the next track ?
+  const [hasPreviousTrack,setHasPreviousTrack] = useState(true);//can we play the previous track ?
+  const [hasNextTrack,setHasNextTrack] = useState(true);//can we play the next track ?
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
@@ -182,12 +217,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   /*
   useEffect(() => {
 
-    const buildNeedles = (array) => {
-      return array.flatMap(
-        (v, i) => Array.isArray(v) ? buildNeedles(v).map(a => [i, ...a]) : [[i]]
-      );
-    }
-
     //flatten all the URLs
     const flatUrls = playlist.flat(Infinity);
     setFlatUrls(flatUrls);
@@ -208,17 +237,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (!urlMap || !flatUrls) return;
     console.log("MAP",urlMap);
-
-    //get value in array using a needle, which is an array of indexes
-    const getValueWithNeedle = (array,indexes) => {
-      const children = array[indexes[0]];
-
-      if(indexes.length > 1){
-        return getValueWithNeedle(children,indexes.slice(1));
-      }else{
-        return children;
-      }
-    }
 
     const needle = urlMap[4];
     console.log("CHECK YO",needle,getValueWithNeedle(playlist,needle));
@@ -288,72 +306,72 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update previous/next controls
   useEffect(() => {
-    setHasPrevious( (getNextPlayableIndex(trackIndex,props.loop,true) !== undefined) );
-    setHasNext( (getNextPlayableIndex(trackIndex,props.loop,false) !== undefined) );
+    setHasPreviousTrack( (getNextPlayableIndex(trackIndex,props.loop,true) !== undefined) );
+    setHasNextTrack( (getNextPlayableIndex(trackIndex,props.loop,false) !== undefined) );
   }, [trackIndex,ignoredUrls,props.loop]);
 
   //let know parent if we can go backward
   useEffect(() => {
-    if (typeof props.onTogglePrevious === 'function') {
-      props.onTogglePrevious(hasPrevious);
+    if (typeof props.onTogglePreviousTrack === 'function') {
+      props.onTogglePreviousTrack(hasPreviousTrack);
     }
-  }, [hasPrevious]);
+  }, [hasPreviousTrack]);
 
   //let know parent if we can go forward
   useEffect(() => {
-    if (typeof props.onToggleNext === 'function') {
-      props.onToggleNext(hasNext);
+    if (typeof props.onToggleNextTrack === 'function') {
+      props.onToggleNextTrack(hasNextTrack);
     }
-  }, [hasNext]);
+  }, [hasNextTrack]);
 
-  //build a list of ignored URLs, as an array of indices
+  //copy of the original data, where the values are replaced by the item being (or not) playable
   useEffect(() => {
-
-    //Copy of the playlist array; where playable URLs = false
-    const blacklisted = [...playlist].map(function(track) {
-      return track.map(function(url) {
-        return ignoredUrls.includes(url) ? url : false;
-      });
-    });
-
-    //build a one-level array of "needles" to retrieve the URLs in the nested array
-    //based on their indexes (eg. [1,5])
-    const buildNeedles = (array) => {
-      return array.flatMap(
-        (v, i) => Array.isArray(v) ? buildNeedles(v).map(a => [i, ...a]) : [[i]]
-      );
-    }
-    let blacklistedKeys = buildNeedles(blacklisted);
-
-    //get value in array using a needle, which is an array of indexes
-    const getValueWithNeedle = (array,indexes) => {
-      const children = array[indexes[0]];
-
-      if(indexes.length > 1){
-        return getValueWithNeedle(children,indexes.slice(1));
-      }else{
-        return children;
+    //Copy of the props.playlist array; where playable URLs = false
+    const playable = [...props.playlist].map(function(track) {
+      const isPlayable = (url) => {
+        return ignoredUrls.includes(url) ? false : true;
       }
-    }
-
-    //remove items that are playable (their is FALSE)
-    blacklistedKeys = blacklistedKeys.filter(function (indices) {
-      const value = getValueWithNeedle(blacklisted,indices);
-      return (value !== false);
+      if ( Array.isArray(track) ){
+        return track.map(function(url) {
+          return isPlayable(url);
+        });
+      }else{
+        return isPlayable(track);
+      }
     });
 
-    setIgnoredKeys(blacklistedKeys);
+    setPlayableData(playable);
 
   }, [ignoredUrls]);
 
-  //when non-playable indices are updated; warn parent
+  //when playable data is updated; warn parent
+  useEffect(() => {
+    if (typeof props.onPlayableData === 'function') {
+      props.onPlayableData(playableData);
+    }
+  }, [playableData]);
+
+  //build a list of ignored indices (based on the playlist being playable)
+  //URGENT useful ?
   useEffect(() => {
 
-    if (typeof props.onIgnoredKeys === 'function') {
-      props.onIgnoredKeys(ignoredKeys);
-    }
+    let needles = buildNeedles(playableData);
 
-  }, [ignoredKeys]);
+    //remove items that are playable (their is FALSE)
+    const blacklistedKeys = needles.filter(function (indices) {
+      const value = getValueWithNeedle(playableData,indices);
+      return (value === false);
+    });
+
+    console.log("playable",playableData);
+    console.log("NEEDLES",needles);
+    console.log("blacklisted",blacklistedKeys);
+
+    setIgnoredKeys(blacklistedKeys);
+
+  }, [playableData]);
+
+
 
   //when non-playable URLs are updated; return an object of ignored keys=>urls to the parent
   useEffect(() => {
@@ -385,6 +403,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           if (newIndex !== undefined){
             setTrackIndex(newIndex);
           }
+        },
+        isPlayable(index){
+          const playable = getValueWithNeedle(playableData,index);
+          console.log('CHECK IS PLAYABLE FOR INDEX / IN',index,playable,playableData);
+          return playable;
         },
         getCurrentUrl(){
           return url;

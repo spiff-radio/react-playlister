@@ -71,6 +71,11 @@
         }
       }
     }
+    .track,.url{
+      &:not(.playable){
+        opacity:.5;
+      }
+    }
   }
 }
 

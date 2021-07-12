@@ -2,19 +2,40 @@ import logo from './logo.svg';
 import './App.scss';
 import React, { useState, useEffect, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
+import classNames from "classnames";
+
+const printIndex = (index) =>{
+  if (Array.isArray(index)){
+    index = index.join(',');
+    index = '['+index+']';
+  }
+  return index;
+}
 
 const ReactPlaylistUrl = props => {
+
+  const playable = props.playlistRef.current.isPlayable(props.index);
+
   return(
-    <>
-    {props.url}
-    </>
+    <span
+    className={
+      classNames({
+        url:true,
+        playable:playable
+      })
+    }
+    >
+    {props.url} - {printIndex(props.index)}
+    </span>
   );
 }
 
 const ReactPlaylistTrack = props => {
 
+  let inner;
+
   if (Array.isArray(props.track)){
-    return (
+    inner = (
         <ul>
         {
           props.track.map((url,urlKey) => {
@@ -22,6 +43,8 @@ const ReactPlaylistTrack = props => {
               <li key={urlKey}>
                 <ReactPlaylistUrl
                 url={url}
+                index={[props.index,urlKey]}
+                playlistRef={props.playlistRef}
                 />
               </li>
             )
@@ -30,12 +53,30 @@ const ReactPlaylistTrack = props => {
         </ul>
     );
   }else{
-    return(
+    inner = (
       <ReactPlaylistUrl
       url={props.track}
+      index={props.index}
+      playlistRef={props.playlistRef}
       />
     )
   }
+
+  const playable = props.playlistRef.current.isPlayable(props.index);
+
+  return (
+    <span
+    className={
+      classNames({
+        track:true,
+        playable:playable
+      })
+    }
+    >
+      {inner}
+    </span>
+
+  );
 
 }
 
@@ -53,7 +94,8 @@ function App() {
     [
       'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
-      'https://www.youtube.com/watch?v=v3RTs0LCc-8'
+      'https://www.notplayable.com',
+      'https://www.youtube.com/watch?v=v3RTs0LCc-8',
     ],
     'https://www.notplayable.com',
     'https://www.notplayable.com',
@@ -70,15 +112,15 @@ function App() {
   const [url, setUrl] = useState();//current url
   const [ignoredUrls,setIgnoredUrls] = useState([]); //non-playable URLs
   const [ignoredUrlKeys,setIgnoredUrlKeys] = useState([]); //non-playable URLs
-  const [hasPrevious,setHasPrevious] = useState();
-  const [hasNext,setHasNext] = useState();
+  const [hasPreviousTrack,setHasPreviousTrack] = useState();
+  const [hasNextTrack,setHasNextTrack] = useState();
 
-  const handleTogglePrevious = (bool) => {
-    setHasPrevious(bool);
+  const handleTogglePreviousTrack = (bool) => {
+    setHasPreviousTrack(bool);
   }
 
-  const handleToggleNext = (bool) => {
-    setHasNext(bool);
+  const handleToggleNextTrack = (bool) => {
+    setHasNextTrack(bool);
   }
 
   const handleIndex = (index) => {
@@ -106,11 +148,19 @@ function App() {
     setIgnoredUrls(ignoredUrls);
   }
 
-  const handleIgnoredKeys = (ignoredKeys) => {
+  const handlePlayableData = (playableData) => {
+
+    console.log("APP/PLAYABLE",playableData);
+    return;
+
+    /*
+
     const output = ignoredKeys.map(function(arr) {
-      return '['+arr.join(",")+']';
+      return printIndex(arr);
     });
     setIgnoredUrlKeys(output);
+
+    */
   }
 
   return (
@@ -126,16 +176,20 @@ function App() {
         <div id="output">
           <ul>
           {
-
-            playlist.map((track,trackKey) => {
-              return (
-                <li key={trackKey}>
-                  <ReactPlaylistTrack
-                  track={track}
-                  />
-                </li>
-              );
-            })
+            playlistRef.current &&
+              playlist.map((track,trackKey) => {
+                return (
+                  <li
+                  key={trackKey}
+                  >
+                    <ReactPlaylistTrack
+                    index={trackKey}
+                    track={track}
+                    playlistRef={playlistRef}
+                    />
+                  </li>
+                );
+              })
           }
           </ul>
         </div>
@@ -152,18 +206,18 @@ function App() {
       playing={playing}
       loop={loop}
       autoskip={autoskip}
-      onTogglePrevious={handleTogglePrevious}
-      onToggleNext={handleToggleNext}
+      onTogglePreviousTrack={handleTogglePreviousTrack}
+      onToggleNextTrack={handleToggleNextTrack}
       onIndex={handleIndex}
+      onPlayableData={handlePlayableData}
       onIgnoredUrls={handleIgnoredUrls}
-      onIgnoredKeys={handleIgnoredKeys}
       />
       {
         playlistRef.current &&
           <div id="controls">
 
             <p>
-              <strong>current track key</strong>
+              <strong>index</strong>
               <span>{trackIndexGUI}</span>
             </p>
 
@@ -202,16 +256,26 @@ function App() {
             </p>
 
             <p>
+              <strong>track</strong>
               <button
               onClick={(e) => playlistRef.current.previousTrack()}
-              disabled={!hasPrevious}
+              disabled={!hasPreviousTrack}
               >Previous</button>
+              <button
+              onClick={(e) => playlistRef.current.nextTrack()}
+              disabled={!hasNextTrack}
+              >Next</button>
             </p>
 
             <p>
+              <strong>track URLs</strong>
+              <button
+              onClick={(e) => playlistRef.current.previousTrack()}
+              disabled={!hasPreviousTrack}
+              >Previous</button>
               <button
               onClick={(e) => playlistRef.current.nextTrack()}
-              disabled={!hasNext}
+              disabled={!hasNextTrack}
               >Next</button>
             </p>
 
