@@ -12,74 +12,6 @@ const printIndex = (index) =>{
   return index;
 }
 
-const ReactPlaylistUrl = props => {
-
-  const playable = props.playlistRef.current.isPlayable(props.index);
-
-  return(
-    <span
-    className={
-      classNames({
-        url:true,
-        playable:playable
-      })
-    }
-    >
-    {props.url} - {printIndex(props.index)}
-    </span>
-  );
-}
-
-const ReactPlaylistTrack = props => {
-
-  let inner;
-
-  if (Array.isArray(props.track)){
-    inner = (
-        <ul>
-        {
-          props.track.map((url,urlKey) => {
-            return(
-              <li key={urlKey}>
-                <ReactPlaylistUrl
-                url={url}
-                index={[props.index,urlKey]}
-                playlistRef={props.playlistRef}
-                />
-              </li>
-            )
-          })
-        }
-        </ul>
-    );
-  }else{
-    inner = (
-      <ReactPlaylistUrl
-      url={props.track}
-      index={props.index}
-      playlistRef={props.playlistRef}
-      />
-    )
-  }
-
-  const playable = props.playlistRef.current.isPlayable(props.index);
-
-  return (
-    <span
-    className={
-      classNames({
-        track:true,
-        playable:playable
-      })
-    }
-    >
-      {inner}
-    </span>
-
-  );
-
-}
-
 function App() {
 
   const playlistRef = useRef();
@@ -108,12 +40,85 @@ function App() {
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
+
   const [url, setUrl] = useState();//current url
   const [ignoredUrls,setIgnoredUrls] = useState([]); //non-playable URLs
-  const [ignoredUrlKeys,setIgnoredUrlKeys] = useState([]); //non-playable URLs
+  const [ignoredUrlKeys,setIgnoredUrlKeys] = useState([]); //non-playable keys
   const [hasPreviousTrack,setHasPreviousTrack] = useState();
   const [hasNextTrack,setHasNextTrack] = useState();
+
+  const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
+  const [ignoredUrlKeysGUI,setIgnoredUrlKeysGUI] = useState(); //non-playable keys - as a string
+
+  const ReactPlaylistUrl = props => {
+
+    //TOUFIX URGENT uses references SO does not work for now
+    const playable = !ignoredUrlKeys.includes(props.index);
+
+    console.log("CHECK PLAYABLE",props.index,ignoredUrlKeys);
+
+    return(
+      <span
+      className={
+        classNames({
+          url:true,
+          playable:playable
+        })
+      }
+      >
+      {props.url} - {printIndex(props.index)}
+      </span>
+    );
+  }
+
+  const ReactPlaylistTrack = props => {
+
+    let inner;
+
+    if (Array.isArray(props.track)){
+      inner = (
+          <ul>
+          {
+            props.track.map((url,urlKey) => {
+              return(
+                <li key={urlKey}>
+                  <ReactPlaylistUrl
+                  url={url}
+                  index={[props.index,urlKey]}
+                  />
+                </li>
+              )
+            })
+          }
+          </ul>
+      );
+    }else{
+      inner = (
+        <ReactPlaylistUrl
+        url={props.track}
+        index={props.index}
+        playlistRef={props.playlistRef}
+        />
+      )
+    }
+
+    const playable = !ignoredUrlKeys.includes(props.index);
+
+    return (
+      <span
+      className={
+        classNames({
+          track:true,
+          playable:playable
+        })
+      }
+      >
+        {inner}
+      </span>
+
+    );
+
+  }
 
   const handleTogglePreviousTrack = (bool) => {
     setHasPreviousTrack(bool);
@@ -148,19 +153,16 @@ function App() {
     setIgnoredUrls(ignoredUrls);
   }
 
-  const handlePlayableData = (playableData) => {
+  const handleIgnoredKeys = (keys) => {
 
-    console.log("APP/PLAYABLE",playableData);
-    return;
+    setIgnoredUrlKeys(keys);
 
-    /*
-
-    const output = ignoredKeys.map(function(arr) {
+    let str = keys.map(function(arr) {
       return printIndex(arr);
     });
-    setIgnoredUrlKeys(output);
+    str = str.join(", ");
+    setIgnoredUrlKeysGUI(str);
 
-    */
   }
 
   return (
@@ -185,7 +187,6 @@ function App() {
                     <ReactPlaylistTrack
                     index={trackKey}
                     track={track}
-                    playlistRef={playlistRef}
                     />
                   </li>
                 );
@@ -209,7 +210,7 @@ function App() {
       onTogglePreviousTrack={handleTogglePreviousTrack}
       onToggleNextTrack={handleToggleNextTrack}
       onIndex={handleIndex}
-      onPlayableData={handlePlayableData}
+      onIgnoredKeys={handleIgnoredKeys}
       onIgnoredUrls={handleIgnoredUrls}
       />
       {
@@ -233,10 +234,7 @@ function App() {
 
             <p>
               <strong>ignored URL keys</strong>
-              <span>{
-                //URGENT
-                ignoredUrlKeys.join(", ")
-              }</span>
+              <span>{ignoredUrlKeysGUI}</span>
             </p>
 
             <p>

@@ -371,9 +371,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [playableData]);
 
-
-
-  //when non-playable URLs are updated; return an object of ignored keys=>urls to the parent
+  //when non-playable URLs are updated; warn parent
   useEffect(() => {
 
     if (typeof props.onIgnoredUrls === 'function') {
@@ -381,6 +379,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
   }, [ignoredUrls]);
+
+  //when non-playable keys are updated; warn parent
+  useEffect(() => {
+
+    if (typeof props.onIgnoredKeys === 'function') {
+      props.onIgnoredKeys(ignoredKeys);
+    }
+
+  }, [ignoredKeys]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
