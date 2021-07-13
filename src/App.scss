@@ -71,9 +71,14 @@
         }
       }
     }
-    .track,.url{
+    .track,.source{
       &:not(.playable){
         opacity:.5;
+      }
+    }
+    .source{
+      &.current{
+        font-weight: bold;
       }
     }
   }

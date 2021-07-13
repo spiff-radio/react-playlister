@@ -14,10 +14,10 @@ const printIndex = (index) =>{
 
 function App() {
 
-  const playlistRef = useRef();
+  const playlisterRef = useRef();
   const inputRef = useRef();
 
-  const [playlist, setUrls] = useState([
+  const [urls, setUrls] = useState([
     'https://www.youtube.com/watch?v=E11DAkrjlP8',
     [
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
@@ -36,109 +36,74 @@ function App() {
 
   ]);
 
-  const [loop, setLoop] = useState(true);
+  const [playerPlaylist, setPlayerPlaylist] = useState([]);
+
+  const [loop, setLoop] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
 
-  const [url, setUrl] = useState();//current url
-  const [ignoredUrls,setIgnoredUrls] = useState([]); //non-playable URLs
-  const [ignoredUrlKeys,setIgnoredUrlKeys] = useState([]); //non-playable keys
   const [hasPreviousTrack,setHasPreviousTrack] = useState();
   const [hasNextTrack,setHasNextTrack] = useState();
 
   const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
-  const [ignoredUrlKeysGUI,setIgnoredUrlKeysGUI] = useState(); //non-playable keys - as a string
 
   const ReactPlaylistFeedBack = props => {
 
-    //since we rely on playlistRef.current.isPlayableUrl & playlistRef.current.isPlayableTrack to know if the items are playable,
-    //force refresh component when ignoredUrlKeys is updated.
-    const [updateCount,setUpdateCount] = useState(0);
-
-    useEffect(() => {
-      setUpdateCount(updateCount+1);
-    }, [ignoredUrlKeys]);
-
-    const ReactPlaylistUrl = props => {
-
-      const playable = playlistRef.current.isPlayableUrl(props.url);
+    const ReactPlaylistSource = props => {
 
       return(
         <span
         className={
           classNames({
-            url:true,
-            playable:playable
+            source:true,
+            playable:props.playable,
+            current:props.current
           })
         }
         >
-        {props.url} - {printIndex(props.index)}
+        {props.url}
         </span>
       );
     }
 
     const ReactPlaylistTrack = props => {
 
-      let inner;
-
-      if (Array.isArray(props.track)){
-        inner = (
-            <ul>
-            {
-              props.track.map((url,urlKey) => {
-                return(
-                  <li key={urlKey}>
-                    <ReactPlaylistUrl
-                    url={url}
-                    index={[props.index,urlKey]}
-                    />
-                  </li>
-                )
-              })
-            }
-            </ul>
-        );
-      }else{
-        inner = (
-          <ReactPlaylistUrl
-          url={props.track}
-          index={props.index}
-          playlistRef={props.playlistRef}
-          />
-        )
-      }
-
-      const playable = playlistRef.current.isPlayableTrack(props.track);
-
-      return (
-        <span
-        className={
-          classNames({
-            track:true,
-            playable:playable
+      return(
+        <ul>
+        {
+          props.sources.map((source,sourceKey) => {
+            const current = props.current && (props.source_index === sourceKey);
+            return(
+              <li key={sourceKey}>
+                <ReactPlaylistSource
+                url={source.url}
+                playable={source.playable}
+                current={current}
+                />
+              </li>
+            )
           })
         }
-        >
-          {inner}
-        </span>
-
+        </ul>
       );
 
     }
 
     return(
-      <ul key={updateCount}>
+      <ul>
       {
-        playlistRef.current &&
-          playlist.map((track,trackKey) => {
+        playerPlaylist.tracks &&
+          playerPlaylist.tracks.map((track,trackKey) => {
             return (
               <li
               key={trackKey}
               >
                 <ReactPlaylistTrack
-                index={trackKey}
-                track={track}
+                sources={track.sources}
+                playable={track.playable}
+                current={playerPlaylist.track_index === trackKey}
+                source_index={track.source_index}
                 />
               </li>
             );
@@ -159,15 +124,19 @@ function App() {
 
   const handleIndex = (index) => {
     console.log("handleIndex",index);
-    const url = playlistRef.current.getCurrentUrl();
+    const url = playlisterRef.current.getCurrentUrl();
 
     setTrackIndexGUI(index);
-    setUrl(url);
+  }
+
+  const handleUpdated = playlist => {
+    console.log("APP/PLAYER PLAYLIST",playlist);
+    setPlayerPlaylist(playlist);
   }
 
   const handleGetReactPlayer = (e) => {
     e.preventDefault();
-    const player = playlistRef.current.getReactPlayer();
+    const player = playlisterRef.current.getReactPlayer();
     console.log(player);
   }
 
@@ -178,21 +147,9 @@ function App() {
     setUrls(arr);
   }
 
-  const handleIgnoredUrls = (ignoredUrls) => {
-    setIgnoredUrls(ignoredUrls);
-  }
-
-  const handleIgnoredKeys = (keys) => {
-
-    setIgnoredUrlKeys(keys);
-
-    let str = keys.map(function(arr) {
-      return printIndex(arr);
-    });
-    str = str.join(", ");
-    setIgnoredUrlKeysGUI(str);
-
-  }
+  const trackIndex = playerPlaylist.track_index;
+  const track = playerPlaylist.tracks ? playerPlaylist.tracks[trackIndex] : undefined;
+  const sourceIndex = track ? track.source_index : undefined;
 
   return (
     <div className="App">
@@ -201,12 +158,12 @@ function App() {
       <textarea
       ref={inputRef}
       >
-      {JSON.stringify(playlist,null,2) }
+      {JSON.stringify(urls,null,2) }
       </textarea>
       </div>
         <div id="output">
           <ReactPlaylistFeedBack
-          playlist={playlist}
+          playlist={playerPlaylist}
           />
         </div>
       </div>
@@ -215,41 +172,32 @@ function App() {
         onClick={handleUpdateUrls}
         >update</button>
       </p>
-      <ReactPlaylister
-      ref={playlistRef}
-      index={0}
-      playlist={playlist}
-      playing={playing}
-      loop={loop}
-      autoskip={autoskip}
-      onTogglePreviousTrack={handleTogglePreviousTrack}
-      onToggleNextTrack={handleToggleNextTrack}
-      onIndex={handleIndex}
-      onIgnoredKeys={handleIgnoredKeys}
-      onIgnoredUrls={handleIgnoredUrls}
-      />
       {
-        playlistRef.current &&
+        playerPlaylist &&
           <div id="controls">
 
             <p>
-              <strong>index</strong>
-              <span>{trackIndexGUI}</span>
+              <strong>track #{trackIndex}</strong>
+              <button
+              onClick={(e) => playlisterRef.current.previousTrack()}
+              disabled={!hasPreviousTrack}
+              >Previous</button>
+              <button
+              onClick={(e) => playlisterRef.current.nextTrack()}
+              disabled={!hasNextTrack}
+              >Next</button>
             </p>
 
             <p>
-              <strong>current source url</strong>
-              <span>{url}</span>
-            </p>
-
-            <p>
-              <strong>ignored URLs</strong>
-              <span>{ignoredUrls.join(", ")}</span>
-            </p>
-
-            <p>
-              <strong>ignored URL keys</strong>
-              <span>{ignoredUrlKeysGUI}</span>
+              <strong>source #{sourceIndex}</strong>
+              <button
+              onClick={(e) => playlisterRef.current.previousTrack()}
+              disabled={!hasPreviousTrack}
+              >Previous</button>
+              <button
+              onClick={(e) => playlisterRef.current.nextTrack()}
+              disabled={!hasNextTrack}
+              >Next</button>
             </p>
 
             <p>
@@ -277,30 +225,6 @@ function App() {
             </p>
 
             <p>
-              <strong>track</strong>
-              <button
-              onClick={(e) => playlistRef.current.previousTrack()}
-              disabled={!hasPreviousTrack}
-              >Previous</button>
-              <button
-              onClick={(e) => playlistRef.current.nextTrack()}
-              disabled={!hasNextTrack}
-              >Next</button>
-            </p>
-
-            <p>
-              <strong>track URLs</strong>
-              <button
-              onClick={(e) => playlistRef.current.previousTrack()}
-              disabled={!hasPreviousTrack}
-              >Previous</button>
-              <button
-              onClick={(e) => playlistRef.current.nextTrack()}
-              disabled={!hasNextTrack}
-              >Next</button>
-            </p>
-
-            <p>
               <button
               onClick={handleGetReactPlayer}
               >Get ReactPlayer instance (see console)</button>
@@ -308,6 +232,18 @@ function App() {
 
           </div>
       }
+      <ReactPlaylister
+      ref={playlisterRef}
+      index={0}
+      urls={urls}
+      playing={playing}
+      loop={loop}
+      autoskip={autoskip}
+      onTogglePreviousTrack={handleTogglePreviousTrack}
+      onToggleNextTrack={handleToggleNextTrack}
+      onIndex={handleIndex}
+      onUpdated={handleUpdated}
+      />
     </div>
   );
 }
