@@ -179,7 +179,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       if (newIndex !== undefined){
         setControls({
           ...controls,
-          track_index:newIndex
+          track_index:newIndex,
+          source_index:undefined,
         })
       }
     }
@@ -247,15 +248,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setControls({
       ...controls,
-      track_index:trackIndex
+      track_index:trackIndex,
+      source_index:sourceIndex
     })
-
-    if (sourceIndex !== undefined){
-      setControls({
-        ...controls,
-        source_index:sourceIndex
-      })
-    }
 
 
   }, [props.index]);
@@ -271,7 +266,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (firstIndex !== undefined){
       setControls({
         ...controls,
-        track_index:firstIndex
+        track_index:firstIndex,
+        source_index:undefined,
       })
     }
 
@@ -295,45 +291,43 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [playlist,controls]);
 
-  //update previous/next track controls
+  //update previous/next controls
   useEffect(() => {
     if (controls.track_index === undefined) return;
 
-    const previousQueue = getPlayableTracksQueue(playlist,controls.track_index,props.loop,true);
-    const nextQueue = getPlayableTracksQueue(playlist,controls.track_index,props.loop,false);
-    const previousQueueKeys = getArrayQueueKeys(playlist,previousQueue);
-    const nextQueueKeys = getArrayQueueKeys(playlist,nextQueue);
+    let newControls = {...controls};
 
-    console.log("***********SET TRACK CONTROLS",{previous:previousQueueKeys,next:nextQueueKeys});
+    //TRACK
+    const previousTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,false,true) : [];
+    const nextTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,false,false) : [];
+    const previousTracksQueueKeys = getArrayQueueKeys(playlist,previousTracksQueue);
+    const nextTracksQueueKeys = getArrayQueueKeys(nextTracksQueue,nextTracksQueue);
 
-    setControls({
-      ...controls,
-      previous_tracks:  previousQueueKeys,
-      next_tracks:      nextQueueKeys,
-    })
+    newControls = {
+      ...newControls,
+      previous_tracks:  previousTracksQueueKeys,
+      next_tracks:      nextTracksQueueKeys
+    }
 
-  }, [controls.track_index,props.loop]);
-
-  //update previous/next source controls
-  useEffect(() => {
-    if (controls.track_index === undefined) return;
-    if (controls.source_index === undefined) return;
-
+    //SOURCE
     const track = playlist[controls.track_index];
-    if (track === undefined) return;
+    if (track !== undefined){
+      const previousSourcesQueue = (track.sources.length) ? getPlayableSourcesQueue(track,controls.source_index,false,true) : [];
+      const nextSourcesQueue = (track.sources.length) ? getPlayableSourcesQueue(track,controls.source_index,false,false) : [];
+      const previousSourcesQueueKeys = getArrayQueueKeys(track.sources,previousSourcesQueue);
+      const nextSourcesQueueKeys = getArrayQueueKeys(track.sources,nextSourcesQueue);
 
-    const previousQueue = (track.sources.length) ? getPlayableSourcesQueue(track,controls.source_index,false,true) : [];
-    const nextQueue = (track.sources.length) ? getPlayableSourcesQueue(track,controls.source_index,false,false) : [];
-    const previousQueueKeys = getArrayQueueKeys(track.sources,previousQueue);
-    const nextQueueKeys = getArrayQueueKeys(track.sources,nextQueue);
+      newControls = {
+        ...newControls,
+        previous_sources:previousSourcesQueueKeys,
+        next_sources:nextSourcesQueueKeys
+      }
 
-    setControls({
-      ...controls,
-      previous_sources:previousQueueKeys,
-      next_sources:nextQueueKeys
-    })
+    }
 
-  }, [controls.track_index,controls.source_index]);
+    setControls(newControls)
+
+  }, [controls.track_index,controls.source_index,props.loop]);
 
   //select source
   useEffect(() => {
@@ -376,7 +370,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           if (newIndex !== undefined){
             setControls({
               ...controls,
-              track_index:newIndex
+              track_index:newIndex,
+              source_index:undefined
             })
           }
         },
@@ -384,12 +379,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           setBackwards(false);
           const newIndex = getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,false);
 
-          console.log("NEXT INDEX",newIndex);
-
           if (newIndex !== undefined){
+            console.log("NEXT INDEX",newIndex);
             setControls({
               ...controls,
-              track_index:newIndex
+              track_index:newIndex,
+              source_index:undefined
             })
           }
         },
@@ -398,7 +393,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           const track = playlist[controls.track_index];
           const newIndex = getNextPlayableSourceIndex(track,controls.source_index,props.loop,true);
           if (newIndex !== undefined){
-
+            console.log("PREVIOUS INDEX",newIndex);
             setControls({
               ...controls,
               source_index:newIndex

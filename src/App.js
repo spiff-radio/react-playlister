@@ -14,6 +14,8 @@ const printIndex = (index) =>{
 
 function App() {
 
+
+
   const playlisterRef = useRef();
   const inputRef = useRef();
 
@@ -133,14 +135,14 @@ function App() {
   }
 
   const trackIndex = playerControls.track_index;
-  const track = playerPlaylist ? playerPlaylist[trackIndex] : undefined;
   const hasPreviousTracks = playerControls?.previous_tracks?.length;
   const hasNextTracks = playerControls?.next_tracks?.length;
-
 
   const sourceIndex = playerControls.source_index;
   const hasPreviousSources = playerControls?.previous_sources?.length;
   const hasNextSources = playerControls?.next_sources?.length;
+
+  console.log("APP RELOAD");
 
   return (
     <div className="App">
