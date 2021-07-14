@@ -42,8 +42,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //const [flatUrls,setFlatUrls] = useState();//flattened array of urls
   //const [urlMap,setUrlMap] = useState();//"needles" for flatUrls
   const [playlist,setPlaylist] = useState({
+    tracks:[],
     track_index:undefined,
-    tracks:[]
+    next_tracks:[],
+    previous_tracks:[]
   });//our (transformed) datas
   const [track,setTrack] = useState([]);//current array of URLs
   const [url, setUrl] = useState();//current url
@@ -56,69 +58,69 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
-  const getNextPlayableIndex = (index,loop,backwards) => {
+  const getPlayableQueueIndexes = (index,loop,backwards) => {
 
-    const getNextPlayableIndexes = (index,loop,backwards) => {
+    let playableTracksQueue = [];
 
-      let playableTracksQueue = [];
+    //build a queue of keys based on an array
+    //If index is NOT defined, it will return the full array.
+    const getTracksQueue = (tracks,index,loop,backwards) => {
+      let previousTracks = [];
+      let nextTracks = [];
+      let tracksQueue = [];
 
-      //build a queue of keys based on an array
-      //If index is NOT defined, it will return the full array.
-      const getTracksQueue = (tracks,index,loop,backwards) => {
-        let previousTracks = [];
-        let nextTracks = [];
-        let tracksQueue = [];
+      if (index !== undefined){
+        var nextIndex = index+1;
 
-        if (index !== undefined){
-          var nextIndex = index+1;
-
-          if (nextIndex < tracks.length){
-            nextTracks = tracks.slice(nextIndex);
-          }
-
-          if (index > 0){
-            previousTracks = tracks.slice(0,index);
-          }
-
-        }else{
-          nextTracks = tracks;
+        if (nextIndex < tracks.length){
+          nextTracks = tracks.slice(nextIndex);
         }
 
-        if (loop){
-          nextTracks = previousTracks = nextTracks.concat(previousTracks);
+        if (index > 0){
+          previousTracks = tracks.slice(0,index);
         }
 
-        if (backwards === true){
-          tracksQueue = previousTracks.reverse();
-        }else{
-          tracksQueue = nextTracks;
-        }
-
-        return tracksQueue;
+      }else{
+        nextTracks = tracks;
       }
 
-      if (playlist.tracks){
-        const tracksQueue = getTracksQueue(playlist.tracks,index,loop,backwards);
-
-        playableTracksQueue = tracksQueue.filter(function (track) {
-          return hasPlayableSources(track.sources);
-        });
-
-        /*
-        console.log("PLAYABLE QUEUE FOR #"+index,playableTracksQueue,{
-          'playlist':playlist,
-          'index':index,
-          'loop':loop,
-          'backwards':backwards
-        });
-        */
+      if (loop){
+        nextTracks = previousTracks = nextTracks.concat(previousTracks);
       }
 
-      return playableTracksQueue;
+      if (backwards === true){
+        tracksQueue = previousTracks.reverse();
+      }else{
+        tracksQueue = nextTracks;
+      }
+
+      return tracksQueue;
     }
 
     if (playlist.tracks){
-      const queue = getNextPlayableIndexes(trackIndex,loop,backwards);
+      const tracksQueue = getTracksQueue(playlist.tracks,index,loop,backwards);
+
+      playableTracksQueue = tracksQueue.filter(function (track) {
+        return hasPlayableSources(track);
+      });
+
+      /*
+      console.log("PLAYABLE QUEUE FOR #"+index,playableTracksQueue,{
+        'playlist':playlist,
+        'index':index,
+        'loop':loop,
+        'backwards':backwards
+      });
+      */
+    }
+
+    return playableTracksQueue;
+  }
+
+  const getNextPlayableIndex = (index,loop,backwards) => {
+
+    if (playlist.tracks){
+      const queue = getPlayableQueueIndexes(trackIndex,loop,backwards);
       const firstTrack = queue[0];
       const newIndex = playlist.tracks.indexOf(firstTrack);
 
@@ -128,12 +130,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const hasPlayableSources = sources => {
-
-      let playableItems = sources.filter(source => source.playable);
-
+  const hasPlayableSources = track => {
+      let playableItems = track.sources.filter(source => source.playable);
       return (playableItems.length > 0);
-
   }
 
   const handleReady = () => {
@@ -175,11 +174,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       });
 
-      return {
+      let track = {
         sources:sources,
-        source_index:0,
-        playable:hasPlayableSources(sources)
+        source_index:0
       }
+
+      track.playable = hasPlayableSources(track);
+
+      return track;
 
     }
 
@@ -189,12 +191,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     );
 
-    const playlist = {
+    const newPlaylist = {
+      ...playlist,
       track_index:0,
       tracks:tracks
     }
 
-    setPlaylist(playlist);
+    setPlaylist(newPlaylist);
 
   }, [props.urls]);
 
@@ -206,19 +209,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
   }, [playlist]);
-
-  //if any, update current index when urls prop is updated (url could have moved within array)
-  /*
-  useEffect(() => {
-    if (trackIndex===undefined) return;
-
-    const firstIndex = getNextPlayableIndex(undefined);
-    let newIndex = playlist.indexOf(url);
-    newIndex = (newIndex !== -1) ? newIndex : firstIndex;
-    setTrackIndex(newIndex);
-
-  }, [playlist]);
-  */
 
   //update index when prop changes
   useEffect(() => {
@@ -271,24 +261,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }, [playlist.track_index]);
 
   //update previous/next controls
+  //TOUFIX URGENT NOT WORKING
+
   useEffect(() => {
-    setHasPreviousTrack( (getNextPlayableIndex(playlist.track_index,props.loop,true) !== undefined) );
-    setHasNextTrack( (getNextPlayableIndex(playlist.track_index,props.loop,false) !== undefined) );
+    /*
+    setPlaylist({
+      ...playlist,
+      next_tracks:      getPlayableQueueIndexes(playlist.track_index,props.loop,true),
+      previous_tracks:  getPlayableQueueIndexes(playlist.track_index,props.loop,false)
+    })
+    */
+
   }, [playlist.track_index,props.loop]);
 
-  //let know parent if we can go backward
-  useEffect(() => {
-    if (typeof props.onTogglePreviousTrack === 'function') {
-      props.onTogglePreviousTrack(hasPreviousTrack);
-    }
-  }, [hasPreviousTrack]);
-
-  //let know parent if we can go forward
-  useEffect(() => {
-    if (typeof props.onToggleNextTrack === 'function') {
-      props.onToggleNextTrack(hasNextTrack);
-    }
-  }, [hasNextTrack]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740

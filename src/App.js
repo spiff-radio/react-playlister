@@ -42,10 +42,6 @@ function App() {
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-
-  const [hasPreviousTrack,setHasPreviousTrack] = useState();
-  const [hasNextTrack,setHasNextTrack] = useState();
-
   const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
 
   const ReactPlaylistFeedBack = props => {
@@ -114,14 +110,6 @@ function App() {
 
   }
 
-  const handleTogglePreviousTrack = (bool) => {
-    setHasPreviousTrack(bool);
-  }
-
-  const handleToggleNextTrack = (bool) => {
-    setHasNextTrack(bool);
-  }
-
   const handleIndex = (index) => {
     console.log("handleIndex",index);
     const url = playlisterRef.current.getCurrentUrl();
@@ -180,11 +168,11 @@ function App() {
               <strong>track #{trackIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasPreviousTrack}
+              disabled={!playerPlaylist?.previous_tracks?.length}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasNextTrack}
+              disabled={!playerPlaylist?.next_tracks?.length}
               >Next</button>
             </p>
 
@@ -192,11 +180,11 @@ function App() {
               <strong>source #{sourceIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasPreviousTrack}
+              disabled={!playerPlaylist?.previous_tracks?.length}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasNextTrack}
+              disabled={!playerPlaylist?.next_tracks?.length}
               >Next</button>
             </p>
 
@@ -239,8 +227,6 @@ function App() {
       playing={playing}
       loop={loop}
       autoskip={autoskip}
-      onTogglePreviousTrack={handleTogglePreviousTrack}
-      onToggleNextTrack={handleToggleNextTrack}
       onIndex={handleIndex}
       onUpdated={handleUpdated}
       />
