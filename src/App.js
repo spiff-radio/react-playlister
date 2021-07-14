@@ -38,6 +38,7 @@ function App() {
   ]);
 
   const [playerPlaylist, setPlayerPlaylist] = useState([]);
+  const [playerControls, setPlayerControls] = useState({});
 
   const [loop, setLoop] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -90,30 +91,32 @@ function App() {
     return(
       <ul>
       {
-        playerPlaylist.tracks &&
-          playerPlaylist.tracks.map((track,trackKey) => {
-            return (
-              <li
-              key={trackKey}
-              >
-                <ReactPlaylistTrack
-                sources={track.sources}
-                playable={track.playable}
-                current={playerPlaylist.track_index === trackKey}
-                source_index={track.source_index}
-                />
-              </li>
-            );
-          })
+        playerPlaylist.map((track,trackKey) => {
+          const isCurrent = (playerControls.track_index === trackKey);
+          const source_index = isCurrent ? playerControls.source_index : undefined;
+          return (
+            <li
+            key={trackKey}
+            >
+              <ReactPlaylistTrack
+              sources={track.sources}
+              playable={track.playable}
+              current={isCurrent}
+              source_index={source_index}
+              />
+            </li>
+          );
+        })
       }
       </ul>
     );
 
   }
 
-  const handleUpdated = playlist => {
-    console.log("APP/PLAYER PLAYLIST",playlist);
+  const handleUpdated = (playlist,controls) => {
+    console.log("APP/PLAYER PLAYLIST & CONTROLS",playlist,controls);
     setPlayerPlaylist(playlist);
+    setPlayerControls(controls);
   }
 
   const handleGetReactPlayer = (e) => {
@@ -129,14 +132,15 @@ function App() {
     setUrls(arr);
   }
 
-  const trackIndex = playerPlaylist.track_index;
-  const track = playerPlaylist.tracks ? playerPlaylist.tracks[trackIndex] : undefined;
-  const hasNextTracks = playerPlaylist?.previous_tracks?.length;
-  const hasPreviousTracks = playerPlaylist?.next_tracks?.length;
+  const trackIndex = playerControls.track_index;
+  const track = playerPlaylist ? playerPlaylist[trackIndex] : undefined;
+  const hasPreviousTracks = playerControls?.previous_tracks?.length;
+  const hasNextTracks = playerControls?.next_tracks?.length;
 
-  const sourceIndex = track?.source_index;
-  const hasPreviousSources = track?.previous_sources?.length;
-  const hasNextSources = track?.next_sources?.length;
+
+  const sourceIndex = playerControls.source_index;
+  const hasPreviousSources = playerControls?.previous_sources?.length;
+  const hasNextSources = playerControls?.next_sources?.length;
 
   return (
     <div className="App">
@@ -151,6 +155,7 @@ function App() {
         <div id="output">
           <ReactPlaylistFeedBack
           playlist={playerPlaylist}
+          controls={setPlayerControls}
           />
         </div>
       </div>
@@ -167,11 +172,11 @@ function App() {
               <strong>track #{trackIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasNextTracks}
+              disabled={!hasPreviousTracks}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasPreviousTracks}
+              disabled={!hasNextTracks}
               >Next</button>
             </p>
 
