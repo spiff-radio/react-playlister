@@ -221,7 +221,7 @@ function App() {
       }
       <ReactPlaylister
       ref={playlisterRef}
-      index={[1,1]}
+      index={[3,1]} //track index OR [track index,source index]
       urls={urls}
       playing={playing}
       loop={loop}
