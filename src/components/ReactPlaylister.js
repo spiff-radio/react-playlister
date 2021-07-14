@@ -50,7 +50,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [track,setTrack] = useState([]);//current array of URLs
   const [url, setUrl] = useState();//current url
 
-  const [trackIndex, setTrackIndex] = useState(props.index);
   const [urlIndex, setUrlIndex] = useState(0);
 
   const [hasPreviousTrack,setHasPreviousTrack] = useState(true);//can we play the previous track ?
@@ -58,75 +57,96 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
-  const getPlayableQueueIndexes = (index,loop,backwards) => {
+  //build a queue of keys based on an array
+  //If index is NOT defined, it will return the full array.
+  const getArrayQueue = (array,index,loop,backwards) => {
+    let previousQueue = [];
+    let nextQueue = [];
+    let queue = [];
 
-    let playableTracksQueue = [];
+    if (index !== undefined){
+      var nextIndex = index+1;
 
-    //build a queue of keys based on an array
-    //If index is NOT defined, it will return the full array.
-    const getTracksQueue = (tracks,index,loop,backwards) => {
-      let previousTracks = [];
-      let nextTracks = [];
-      let tracksQueue = [];
-
-      if (index !== undefined){
-        var nextIndex = index+1;
-
-        if (nextIndex < tracks.length){
-          nextTracks = tracks.slice(nextIndex);
-        }
-
-        if (index > 0){
-          previousTracks = tracks.slice(0,index);
-        }
-
-      }else{
-        nextTracks = tracks;
+      if (nextIndex < array.length){
+        nextQueue = array.slice(nextIndex);
       }
 
-      if (loop){
-        nextTracks = previousTracks = nextTracks.concat(previousTracks);
+      if (index > 0){
+        previousQueue = array.slice(0,index);
       }
 
-      if (backwards === true){
-        tracksQueue = previousTracks.reverse();
-      }else{
-        tracksQueue = nextTracks;
-      }
-
-      return tracksQueue;
+    }else{
+      nextQueue = array;
     }
 
-    if (playlist.tracks){
-      const tracksQueue = getTracksQueue(playlist.tracks,index,loop,backwards);
-
-      playableTracksQueue = tracksQueue.filter(function (track) {
-        return hasPlayableSources(track);
-      });
-
-      /*
-      console.log("PLAYABLE QUEUE FOR #"+index,playableTracksQueue,{
-        'playlist':playlist,
-        'index':index,
-        'loop':loop,
-        'backwards':backwards
-      });
-      */
+    if (loop){
+      nextQueue = previousQueue = nextQueue.concat(previousQueue);
     }
 
-    return playableTracksQueue;
+    if (backwards === true){
+      queue = previousQueue.reverse();
+    }else{
+      queue = nextQueue;
+    }
+
+    return queue;
   }
 
-  const getNextPlayableIndex = (index,loop,backwards) => {
+  //return an array of keys based on a queue
+  const getArrayQueueKeys = (array,queue) => {
+    return queue.map(function(item) {
+      const index = array.indexOf(item);
+      return (index !== -1) ? index : undefined;
+    })
+  }
+
+  const getPlayableTracksQueue = (playlist,index,loop,backwards) => {
+
+    let playableQueue = [];
 
     if (playlist.tracks){
-      const queue = getPlayableQueueIndexes(trackIndex,loop,backwards);
-      const firstTrack = queue[0];
-      const newIndex = playlist.tracks.indexOf(firstTrack);
+      const queue = getArrayQueue(playlist.tracks,index,loop,backwards);
 
-      return (newIndex !== -1) ? newIndex : undefined;
+      playableQueue = queue.filter(function (track) {
+        return hasPlayableSources(track);
+      });
     }
 
+    return playableQueue;
+  }
+
+  const getPlayableSourcesQueue = (track,index,loop,backwards) => {
+
+    let playableQueue = [];
+
+    if (track.sources){
+      const queue = getArrayQueue(track.sources,index,loop,backwards);
+
+      playableQueue = queue.filter(function (source) {
+        return source.playable;
+      });
+    }
+
+    return playableQueue;
+  }
+
+  const getNextPlayableTrackIndex = (playlist,index,loop,backwards) => {
+
+    if (playlist.tracks){
+      const queue = getPlayableTracksQueue(playlist,index,loop,backwards);
+      const queueKeys = getArrayQueueKeys(playlist.tracks,queue);
+      return queueKeys[0];
+    }
+
+  }
+
+  const getNextPlayableSourceIndex = (track,index,loop,backwards) => {
+
+    if (track.sources){
+      const queue = getPlayableSourcesQueue(track,index,loop,backwards);
+      const queueKeys = getArrayQueueKeys(track.sources,queue);
+      return queueKeys[0];
+    }
 
   }
 
@@ -151,18 +171,64 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //skip automatically if the player is playing
     if (props.playing && props.autoskip){
-      const newIndex = getNextPlayableIndex(trackIndex,props.loop,backwards);
+      const newIndex = getNextPlayableTrackIndex(playlist,playlist.track_index,props.loop,backwards);
       if (newIndex !== undefined){
-        setTrackIndex(newIndex);
+        setPlaylist({
+          ...playlist,
+          track_index:newIndex
+        })
       }
     }
+
+  }
+
+  const updateTrackControls = (track) => {
+    console.log("UPDATE TRACK CONTROLS",track);
+    const previousQueue = (track.sources.length) ? getPlayableSourcesQueue(track,track.source_index,false,true) : [];
+    const nextQueue = (track.sources.length) ? getPlayableSourcesQueue(track,track.source_index,false,false) : [];
+    const previousQueueKeys = getArrayQueueKeys(track.sources,previousQueue);
+    const nextQueueKeys = getArrayQueueKeys(track.sources,nextQueue);
+
+    return {
+      ...track,
+      previous_sources:previousQueueKeys,
+      next_sources:nextQueueKeys
+    }
+  }
+
+  const updateTrack = (index,track) => {
+
+    //update only our track.
+    //https://stackoverflow.com/questions/35628774/how-to-update-single-value-inside-specific-array-item-in-redux
+    var newQueue = playlist.tracks.map(
+      function(oldTrack, i) {
+
+        if (i!==index) return oldTrack;
+
+        //update controls
+        if (track.source_index !== oldTrack.source_index){
+          track = updateTrackControls(track);
+        }
+
+        return track;
+
+
+      }
+    )
+
+    console.log("UPDATE TRACK #"+index,track);
+
+    setPlaylist({
+      ...playlist,
+      tracks:newQueue
+    })
 
   }
 
   //build our initial data
   useEffect(() => {
 
-    const makeTrack = urls => {
+    const makeTrack = (urls,track_index) => {
 
       urls = [].concat(urls || []);//force array (it might be a single URL string)
       urls = urls.flat(Infinity);//flatten
@@ -175,11 +241,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       });
 
       let track = {
-        sources:sources,
-        source_index:0
+        sources:sources
       }
 
-      track.playable = hasPlayableSources(track);
+      const allQueue = getArrayQueue(track.sources,undefined,true,false);
+      const allQueueKeys = getArrayQueueKeys(track.sources,allQueue);
+      const initialIndex = getNextPlayableSourceIndex(track,undefined);
+
+      track = {
+        ...track,
+        playable: hasPlayableSources(track),
+        source_index:initialIndex
+      }
+
+      track = updateTrackControls(track);
 
       return track;
 
@@ -187,57 +262,31 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const tracks = props.urls.map(
       (v, i) => {
-        return makeTrack(v)
+        return makeTrack(v,i)
       }
     );
 
     const newPlaylist = {
       ...playlist,
-      track_index:0,
       tracks:tracks
     }
+
+    console.log("SET PLAYLIST",newPlaylist);
 
     setPlaylist(newPlaylist);
 
   }, [props.urls]);
 
-  //warn parent that data has been updated
-  useEffect(() => {
-
-    if (typeof props.onUpdated === 'function') {
-      props.onUpdated(playlist);
-    }
-
-  }, [playlist]);
-
   //update index when prop changes
   useEffect(() => {
-    if (props.index !== undefined){
-      setTrackIndex(props.index);
-    }
-  }, [props.index]);
 
-  //if index is not defined; use first entry
-  /*
-  useEffect(() => {
-    if ( !playlist[trackIndex] ){
-      const firstIndex = getNextPlayableIndex(undefined);
-      setTrackIndex(firstIndex);
-    }
-  }, [trackIndex]);
-  */
+    const indexes = [].concat(props.index || []);//force array (we might have passed the track index only)
 
-  //tell parent index has changed
-  useEffect(() => {
-    if (typeof props.onIndex === 'function') {
-      props.onIndex(trackIndex);
-    }
-  }, [trackIndex]);
+    console.log("INDEXES",indexes);return;
 
-  //updata data depending of the current track index
-  useEffect(() => {
+    const trackIndex = indexes[0];
+    const sourceIndex = indexes[1];
 
-    if (!playlist.tracks.length) return;
     if (trackIndex === undefined) return;
 
     setPlaylist({
@@ -245,34 +294,77 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       track_index:trackIndex
     })
 
-  }, [trackIndex]);
+    if (sourceIndex !== undefined){
+      const track = playlist.tracks[trackIndex];
+      updateTrack(playlist.track_index,{
+        ...track,
+        source_index:sourceIndex
+      })
+    }
 
+
+  }, [props.index]);
+
+  //if track index is not defined; use first entry
+  useEffect(() => {
+    if ( !playlist.tracks.length) return;
+    if ( playlist.track_index !== undefined ) return;
+
+    const firstIndex = getNextPlayableTrackIndex(playlist,undefined);
+
+    if (firstIndex !== undefined){
+      setPlaylist({
+        ...playlist,
+        track_index:firstIndex
+      })
+    }
+
+  }, [playlist]);
+
+
+  //update previous/next track controls
   useEffect(() => {
     if (playlist.track_index === undefined) return;
 
-    const track = playlist.tracks[playlist.track_index];
+    const previousQueue = getPlayableTracksQueue(playlist,playlist.track_index,props.loop,true);
+    const nextQueue = getPlayableTracksQueue(playlist,playlist.track_index,props.loop,false);
+
+    setPlaylist({
+      ...playlist,
+      previous_tracks:  getArrayQueueKeys(playlist.tracks,previousQueue),
+      next_tracks:      getArrayQueueKeys(playlist.tracks,nextQueue),
+    })
+
+  }, [playlist.track_index,props.loop]);
+
+  //select source
+  useEffect(() => {
+    if (playlist.track_index === undefined) return;
+
+    const trackIndex = playlist.track_index;
+    const track = playlist.tracks[trackIndex];
+
     const sourceIndex = track.source_index;
     const source = track.sources[sourceIndex];
 
-    console.log("SET TRACK",track,source);
+    const newUrl = source.url;
 
-    setUrl(source.url);
+    if (newUrl === url) return; //unchanged
 
-  }, [playlist.track_index]);
+    setUrl(newUrl);
 
-  //update previous/next controls
-  //TOUFIX URGENT NOT WORKING
+  }, [playlist]);
 
+  //warn parent that data has been updated
   useEffect(() => {
-    /*
-    setPlaylist({
-      ...playlist,
-      next_tracks:      getPlayableQueueIndexes(playlist.track_index,props.loop,true),
-      previous_tracks:  getPlayableQueueIndexes(playlist.track_index,props.loop,false)
-    })
-    */
 
-  }, [playlist.track_index,props.loop]);
+    console.log("NEW PLAYLIST",playlist);
+
+    if (typeof props.onUpdated === 'function') {
+      props.onUpdated(playlist);
+    }
+
+  }, [playlist]);
 
 
   //methods parent can use
@@ -282,19 +374,54 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       () => ({
         previousTrack() {
           setBackwards(true);
-          const newIndex = getNextPlayableIndex(trackIndex,props.loop,true);
+          const newIndex = getNextPlayableTrackIndex(playlist,playlist.track_index,props.loop,true);
           if (newIndex !== undefined){
-            setTrackIndex(newIndex);
+            setPlaylist({
+              ...playlist,
+              track_index:newIndex
+            })
           }
         },
         nextTrack() {
           setBackwards(false);
-          const newIndex = getNextPlayableIndex(trackIndex,props.loop,false);
+          const newIndex = getNextPlayableTrackIndex(playlist,playlist.track_index,props.loop,false);
 
           console.log("NEXT INDEX",newIndex);
 
           if (newIndex !== undefined){
-            setTrackIndex(newIndex);
+            setPlaylist({
+              ...playlist,
+              track_index:newIndex
+            })
+          }
+        },
+        previousSource() {
+          setBackwards(true);//TOUFIX TOUCHECK
+          const track = playlist.tracks[playlist.track_index];
+          const newIndex = getNextPlayableSourceIndex(track,track.source_index,props.loop,true);
+          if (newIndex !== undefined){
+
+            updateTrack(playlist.track_index,{
+              ...track,
+              source_index:newIndex
+            })
+
+          }
+        },
+        nextSource() {
+          setBackwards(false);//TOUFIX TOUCHECK
+          const track = playlist.tracks[playlist.track_index];
+          const newIndex = getNextPlayableSourceIndex(track,track.source_index,props.loop,false);
+
+          console.log("NEXT INDEX",newIndex);
+
+          if (newIndex !== undefined){
+
+            updateTrack(playlist.track_index,{
+              ...track,
+              source_index:newIndex
+            })
+
           }
         },
         getCurrentUrl(){

@@ -23,6 +23,7 @@ function App() {
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
       'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends'
     ],
+    [],
     [
       'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
@@ -42,7 +43,7 @@ function App() {
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const [trackIndexGUI, setTrackIndexGUI] = useState(0);//current url index
+  const [indexesGUI, setIndexesGUI] = useState([]);//current playlist track index + source index
 
   const ReactPlaylistFeedBack = props => {
 
@@ -110,13 +111,6 @@ function App() {
 
   }
 
-  const handleIndex = (index) => {
-    console.log("handleIndex",index);
-    const url = playlisterRef.current.getCurrentUrl();
-
-    setTrackIndexGUI(index);
-  }
-
   const handleUpdated = playlist => {
     console.log("APP/PLAYER PLAYLIST",playlist);
     setPlayerPlaylist(playlist);
@@ -137,7 +131,12 @@ function App() {
 
   const trackIndex = playerPlaylist.track_index;
   const track = playerPlaylist.tracks ? playerPlaylist.tracks[trackIndex] : undefined;
-  const sourceIndex = track ? track.source_index : undefined;
+  const hasNextTracks = playerPlaylist?.previous_tracks?.length;
+  const hasPreviousTracks = playerPlaylist?.next_tracks?.length;
+
+  const sourceIndex = track?.source_index;
+  const hasPreviousSources = track?.previous_sources?.length;
+  const hasNextSources = track?.next_sources?.length;
 
   return (
     <div className="App">
@@ -168,23 +167,23 @@ function App() {
               <strong>track #{trackIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!playerPlaylist?.previous_tracks?.length}
+              disabled={!hasNextTracks}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!playerPlaylist?.next_tracks?.length}
+              disabled={!hasPreviousTracks}
               >Next</button>
             </p>
 
             <p>
               <strong>source #{sourceIndex}</strong>
               <button
-              onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!playerPlaylist?.previous_tracks?.length}
+              onClick={(e) => playlisterRef.current.previousSource()}
+              disabled={!hasPreviousSources}
               >Previous</button>
               <button
-              onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!playerPlaylist?.next_tracks?.length}
+              onClick={(e) => playlisterRef.current.nextSource()}
+              disabled={!hasNextSources}
               >Next</button>
             </p>
 
@@ -222,12 +221,11 @@ function App() {
       }
       <ReactPlaylister
       ref={playlisterRef}
-      index={0}
+      index={[1,1]}
       urls={urls}
       playing={playing}
       loop={loop}
       autoskip={autoskip}
-      onIndex={handleIndex}
       onUpdated={handleUpdated}
       />
     </div>
