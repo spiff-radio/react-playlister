@@ -38,11 +38,10 @@ const buildNeedles = (array) => {
 export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
+  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
+  const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
 
-  //const [flatUrls,setFlatUrls] = useState();//flattened array of urls
-  //const [urlMap,setUrlMap] = useState();//"needles" for flatUrls
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas
-
   const [controls,setControls] = useState({
     track_index:undefined,
     source_index:undefined,
@@ -52,15 +51,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     previous_sources:[]
   });
 
-  const [track,setTrack] = useState([]);//current array of URLs
   const [url, setUrl] = useState();//current url
-
-  const [urlIndex, setUrlIndex] = useState(0);
-
-  const [hasPreviousTrack,setHasPreviousTrack] = useState(true);//can we play the previous track ?
-  const [hasNextTrack,setHasNextTrack] = useState(true);//can we play the next track ?
-  const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
-  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
 
   //build a queue of keys based on an array
   //If index is NOT defined, it will return the full array.
@@ -160,18 +151,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return (playableItems.length > 0);
   }
 
-  const handleReady = () => {
+  const handleReady = (player) => {
     setBackwards(false);//if we were skipping backwards, resets it.
+
+    //pass React Player prop to parent
     if (typeof props.onReady === 'function') {
-      props.onReady();
+      props.onReady(player);
     }
   }
 
   const handleError = (e) => {
     //URGENT FIX SET PLAYABLE = FALSE
-    if (typeof props.onError === 'function') {
-      props.onError(e);
-    }
 
     //skip automatically if the player is playing
     if (props.playing && props.autoskip){
@@ -183,6 +173,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           source_index:undefined,
         })
       }
+    }
+
+    //pass React Player prop to parent
+    if (typeof props.onError === 'function') {
+      props.onError(e);
     }
 
   }
@@ -225,15 +220,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     );
 
-    const newPlaylist = tracks;
-
-    console.log("SET PLAYLIST",newPlaylist);
-
-    setPlaylist(newPlaylist);
+    setPlaylist(tracks);
 
   }, [props.urls]);
 
   //update index when prop changes
+  //TOUFIX URGENT BROKEN; makes infinite loop.
   /*
   useEffect(() => {
 
@@ -432,8 +424,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
       playing={props.playing}
       url={url}
-      onError={handleError}
       onReady={handleReady}
+      //onStart={handleStart}
+      //onPlay={handlePlay}
+      //onPause={handlePause}
+      //onBuffer={handleBuffer}
+      //onBufferEnd={handleBufferEnd}
+      //onEnded={handleEnded}
+      //onClickPreview={handleClickPreview}
+      //onEnablePIP={handleEnablePIP}
+      //onDisablePIP={handleDisablePIP}
+      onError={handleError}
+      //onDuration={handleDuration}
+      //onSeek={handleSeek}
+      //onProgress={handleProgress}
       />
     </div>
   );
