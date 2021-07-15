@@ -146,7 +146,7 @@ function App() {
 
   return (
     <div className="App">
-      <did id="intro">
+      <div id="intro">
         <p>
         <a href="https://github.com/gordielachance/react-playlister" target="_blank">ReactPlaylister</a> is a React component wrapper to build a playlist on top of the <a href="https://github.com/cookpete/react-player/" target="_blank">React Player</a> component.
         </p>
