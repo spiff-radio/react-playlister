@@ -90,6 +90,11 @@ function App() {
           >
           {JSON.stringify(urls,null,2) }
           </textarea>
+          <p>
+            <button
+            onClick={handleUpdateUrls}
+            >Load</button>
+          </p>
         </div>
         <div id="output">
           <AppFeedback
@@ -98,11 +103,6 @@ function App() {
           />
         </div>
       </div>
-      <p>
-        <button
-        onClick={handleUpdateUrls}
-        >update</button>
-      </p>
       {
         playerPlaylist &&
           <div id="controls">
