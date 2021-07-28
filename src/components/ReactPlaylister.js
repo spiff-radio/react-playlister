@@ -163,6 +163,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const handleError = (e) => {
     //URGENT FIX SET PLAYABLE = FALSE
 
+    //pass React Player prop to parent
+    if (typeof props.onError === 'function') {
+      props.onError(e);
+    }
+
     //skip automatically if the player is playing
     if (props.playing && props.autoskip){
       const newIndex = getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards);
@@ -175,12 +180,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     }
 
-    //pass React Player prop to parent
-    if (typeof props.onError === 'function') {
-      props.onError(e);
-    }
-
   }
+
 
   //build our initial data
   useEffect(() => {
@@ -424,20 +425,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
       playing={props.playing}
       url={url}
+
       onReady={handleReady}
-      //onStart={handleStart}
-      //onPlay={handlePlay}
-      //onPause={handlePause}
-      //onBuffer={handleBuffer}
-      //onBufferEnd={handleBufferEnd}
-      //onEnded={handleEnded}
-      //onClickPreview={handleClickPreview}
-      //onEnablePIP={handleEnablePIP}
-      //onDisablePIP={handleDisablePIP}
       onError={handleError}
-      //onDuration={handleDuration}
-      //onSeek={handleSeek}
-      //onProgress={handleProgress}
+
+      onStart={props.onStart}
+      onPlay={props.onPlay}
+      onPause={props.onPause}
+      onBuffer={props.onBuffer}
+      onBufferEnd={props.onBufferEnd}
+      onEnded={props.onEnded}
+      onDuration={props.onDuration}
+      onSeek={props.onSeek}
+      onProgress={props.onProgress}
+      onClickPreview={props.onClickPreview}
+      onEnablePIP={props.onEnablePIP}
+      onDisablePIP={props.onDisablePIP}
       />
     </div>
   );
