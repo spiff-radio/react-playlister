@@ -80,11 +80,15 @@ function App() {
     <div className="App">
       <div id="intro">
         <p>
-        <a href="https://github.com/gordielachance/react-playlister" target="_blank">ReactPlaylister</a> is a React component wrapper to build a playlist on top of the <a href="https://github.com/cookpete/react-player/" target="_blank">React Player</a> component.
+          <a href="https://github.com/gordielachance/react-playlister" target="_blank">ReactPlaylister</a> is a React component wrapper to build a playlist on top of the <a href="https://github.com/cookpete/react-player/" target="_blank">React Player</a> component.
+        </p>
+        <p>
+          Input should be an array of "tracks".  A track can be a single URL or an array of URLs; which can be useful if one or more link is not playable.
         </p>
       </div>
       <div id="feedback">
         <div id="input">
+          <h3>Input</h3>
           <textarea
           ref={inputRef}
           >
@@ -97,6 +101,7 @@ function App() {
           </p>
         </div>
         <div id="output">
+          <h3>Feedback</h3>
           <AppFeedback
           playlist={playerPlaylist}
           controls={playerControls}
