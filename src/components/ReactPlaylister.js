@@ -5,6 +5,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
+  const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
 
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas

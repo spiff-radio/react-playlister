@@ -34,6 +34,7 @@ function App() {
   const [playerControls, setPlayerControls] = useState({});
 
   const [loop, setLoop] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
@@ -127,6 +128,14 @@ function App() {
             </p>
 
             <p>
+              <strong>playing</strong>
+              <span>{playing ? 'true' : 'false'}</span>
+              <button
+              onClick={(e) => setPlaying(!playing)}
+              >toggle</button>
+            </p>
+
+            <p>
               <strong>loop</strong>
               <span>{loop ? 'true' : 'false'}</span>
               <button
@@ -135,10 +144,10 @@ function App() {
             </p>
 
             <p>
-              <strong>playing</strong>
-              <span>{playing ? 'true' : 'false'}</span>
+              <strong>shuffle</strong>
+              <span>{shuffle ? 'true' : 'false'}</span>
               <button
-              onClick={(e) => setPlaying(!playing)}
+              onClick={(e) => setShuffle(!shuffle)}
               >toggle</button>
             </p>
 
