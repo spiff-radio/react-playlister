@@ -2,6 +2,7 @@ import logo from './logo.svg';
 import './App.scss';
 import React, { useState, useEffect, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
+import { AppFeedback } from "./components/AppFeedback";
 import classNames from "classnames";
 
 const printIndex = (index) =>{
@@ -13,8 +14,6 @@ const printIndex = (index) =>{
 }
 
 function App() {
-
-
 
   const playlisterRef = useRef();
   const inputRef = useRef();
@@ -47,73 +46,6 @@ function App() {
   const [autoskip, setAutoskip] = useState(true);
 
   const [indexesGUI, setIndexesGUI] = useState([]);//current playlist track index + source index
-
-  const ReactPlaylistFeedBack = props => {
-
-    const ReactPlaylistSource = props => {
-
-      return(
-        <span
-        className={
-          classNames({
-            source:true,
-            playable:props.playable,
-            current:props.current
-          })
-        }
-        >
-        {props.url}
-        </span>
-      );
-    }
-
-    const ReactPlaylistTrack = props => {
-
-      return(
-        <ul>
-        {
-          props.sources.map((source,sourceKey) => {
-            const current = props.current && (props.source_index === sourceKey);
-            return(
-              <li key={sourceKey}>
-                <ReactPlaylistSource
-                url={source.url}
-                playable={source.playable}
-                current={current}
-                />
-              </li>
-            )
-          })
-        }
-        </ul>
-      );
-
-    }
-
-    return(
-      <ul>
-      {
-        playerPlaylist.map((track,trackKey) => {
-          const isCurrent = (playerControls.track_index === trackKey);
-          const source_index = isCurrent ? playerControls.source_index : undefined;
-          return (
-            <li
-            key={trackKey}
-            >
-              <ReactPlaylistTrack
-              sources={track.sources}
-              playable={track.playable}
-              current={isCurrent}
-              source_index={source_index}
-              />
-            </li>
-          );
-        })
-      }
-      </ul>
-    );
-
-  }
 
   const handleUpdated = (playlist,controls) => {
     console.log("APP/PLAYER PLAYLIST & CONTROLS",playlist,controls);
@@ -152,17 +84,17 @@ function App() {
         </p>
       </div>
       <div id="feedback">
-      <div id="input">
-      <textarea
-      ref={inputRef}
-      >
-      {JSON.stringify(urls,null,2) }
-      </textarea>
-      </div>
+        <div id="input">
+          <textarea
+          ref={inputRef}
+          >
+          {JSON.stringify(urls,null,2) }
+          </textarea>
+        </div>
         <div id="output">
-          <ReactPlaylistFeedBack
+          <AppFeedback
           playlist={playerPlaylist}
-          controls={setPlayerControls}
+          controls={playerControls}
           />
         </div>
       </div>
