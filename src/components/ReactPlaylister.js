@@ -290,10 +290,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     let newControls = {...controls};
 
     //TRACK
-    const previousTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,false,true) : [];
-    const nextTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,false,false) : [];
+    const previousTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,props.loop,true) : [];
+    const nextTracksQueue = (playlist.length) ? getPlayableTracksQueue(playlist,controls.track_index,props.loop,false) : [];
     const previousTracksQueueKeys = getArrayQueueKeys(playlist,previousTracksQueue);
-    const nextTracksQueueKeys = getArrayQueueKeys(nextTracksQueue,nextTracksQueue);
+    const nextTracksQueueKeys = getArrayQueueKeys(playlist,nextTracksQueue);
 
     newControls = {
       ...newControls,
