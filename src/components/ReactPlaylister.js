@@ -1,40 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
 
-//get value in array using a needle
-const getValueWithNeedle = (array,indices) => {
-  indices = !Array.isArray(indices) ? [indices] : indices;
-
-  const children = array[indices[0]];
-  if (children === undefined) return;
-
-  if(indices.length > 1){
-    return getValueWithNeedle(children,indices.slice(1));
-  }else{
-    return children;
-  }
-}
-
-//build a one-level array of "needles" based on an multidimensional input array
-const buildNeedles = (array) => {
-
-  const buildIterableNeedles = (array) => {
-    return array.flatMap(
-      (v, i) => Array.isArray(v) ? buildIterableNeedles(v).map(a => [i, ...a]) : [[i]]
-    );
-  }
-
-  const iterableNeedles = buildIterableNeedles(array);
-
-  //replace the needles depending of the original value being (or not) an array;
-  return iterableNeedles.map(function(indices) {
-    const firstKey = indices[0];
-    const initialValue = array[firstKey];
-    return Array.isArray(initialValue) ? indices : firstKey;
-  });
-
-}
-
 export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
@@ -169,7 +135,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //skip automatically if the player is playing
-    if (props.playing && props.autoskip){
+    if (props.playing && autoskip){
       const newIndex = getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards);
       if (newIndex !== undefined){
         setControls({
@@ -201,10 +167,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       let track = {
         sources:sources
       }
-
-      const allQueue = getArrayQueue(track.sources,undefined,true,false);
-      const allQueueKeys = getArrayQueueKeys(track.sources,allQueue);
-      const initialIndex = getNextPlayableSourceIndex(track,undefined);
 
       track = {
         ...track,

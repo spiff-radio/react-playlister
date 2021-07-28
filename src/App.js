@@ -1,17 +1,9 @@
 import logo from './logo.svg';
 import './App.scss';
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 import { AppFeedback } from "./components/AppFeedback";
-import classNames from "classnames";
 
-const printIndex = (index) =>{
-  if (Array.isArray(index)){
-    index = index.join(',');
-    index = '['+index+']';
-  }
-  return index;
-}
 
 function App() {
 
@@ -44,8 +36,6 @@ function App() {
   const [loop, setLoop] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
-
-  const [indexesGUI, setIndexesGUI] = useState([]);//current playlist track index + source index
 
   const handleUpdated = (playlist,controls) => {
     console.log("APP/PLAYER PLAYLIST & CONTROLS",playlist,controls);
@@ -80,7 +70,7 @@ function App() {
     <div className="App">
       <div id="intro">
         <p>
-          <a href="https://github.com/gordielachance/react-playlister" target="_blank">ReactPlaylister</a> is a React component wrapper to build a playlist on top of the <a href="https://github.com/cookpete/react-player/" target="_blank">React Player</a> component.
+          <a href="https://github.com/gordielachance/react-playlister" target="_blank" rel="noreferrer">ReactPlaylister</a> is a React component wrapper to build a playlist on top of the <a href="https://github.com/cookpete/react-player/" target="_blank" rel="noreferrer">React Player</a> component.
         </p>
         <p>
           Input should be an array of "tracks".  A track can be a single URL or an array of URLs; which can be useful if one or more link is not playable.
