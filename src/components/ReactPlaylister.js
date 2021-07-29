@@ -496,9 +496,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             })
           }
         },
-        getCurrentUrl(){
-          return url;
-        },
         getReactPlayer(){
           return reactPlayerRef.current;
         }
