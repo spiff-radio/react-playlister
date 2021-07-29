@@ -166,7 +166,6 @@ function App() {
               <button
               onClick={(e) => setAutoskip(!autoskip)}
               >toggle</button><br/>
-              <small>Ignore unplayable tracks and sources when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it.</small>
             </p>
 
             <p>
