@@ -39,10 +39,18 @@ function App() {
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const handleUpdated = (playlist,controls) => {
-    console.log("APP/PLAYER PLAYLIST & CONTROLS",playlist,controls);
+  const handlePlaylistUpdated = (playlist) => {
+    console.log("APP / PLAYLIST UPDATED",playlist);
     setPlayerPlaylist(playlist);
+  }
+
+  const handleControlsUpdated = (controls) => {
+    console.log("APP / CONTROLS UPDATED",controls);
     setPlayerControls(controls);
+  }
+
+  const handlePlaylistEnded = () => {
+    console.log("PLAYLIST ENDED");
   }
 
   const handleGetReactPlayer = (e) => {
@@ -158,7 +166,7 @@ function App() {
               <button
               onClick={(e) => setAutoskip(!autoskip)}
               >toggle</button><br/>
-              <small>Ignore unplayable tracks when traversing the playlist; and automatically skip the track if it fires an error while trying to play it.</small>
+              <small>Ignore unplayable tracks and sources when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it.</small>
             </p>
 
             <p>
@@ -171,12 +179,57 @@ function App() {
       }
       <ReactPlaylister
       ref={playlisterRef}
-      index={[3,1]} //track index OR [track index,source index]
+
+      //props
       urls={urls}
-      playing={playing}
+      index={[3,1]} //track index OR [track index,source index]
       loop={loop}
       autoskip={autoskip}
-      onUpdated={handleUpdated}
+
+      //ReactPlayer props
+      playing={playing}
+      controls={true}
+      /*
+      light={}
+      volume={}
+      muted={}
+      playbackRate={}
+      width={}
+      height={}
+      style={}
+      progressInterval={}
+      playsinline={}
+      pip={}
+      stopOnUnmount={}
+      fallback={}
+      wrapper={}
+      playIcon={}
+      previewTabIndex={}
+      config={}
+      */
+
+      //Callback props
+      onPlaylistUpdated={handlePlaylistUpdated}
+      onControlsUpdated={handleControlsUpdated}
+      onPlaylistEnded={handlePlaylistEnded}
+
+      //ReactPlayer callback props
+      /*
+      onReady={}
+      onStart={}
+      onPlay={}
+      onProgress={}
+      onDuration={}
+      onPause={}
+      onBuffer={}
+      onBufferEnd={}
+      onSeek={}
+      onEnded={}
+      onError={}
+      onClickPreview={}
+      onEnablePIP={}
+      onDisablePIP={}
+      */
       />
     </div>
   );

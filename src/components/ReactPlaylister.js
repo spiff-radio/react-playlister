@@ -8,6 +8,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   DEBUG && console.log("REACTPLAYLISTER COMPONENT LOADED");
 
   const reactPlayerRef = useRef();
+  const loop = (props.loop !== undefined) ? props.loop : false;
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
   const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
@@ -167,7 +168,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const handleReady = (player) => {
     setBackwards(false);//if we were skipping backwards, resets it.
 
-    //pass React Player prop to parent
+    //inherit React Player prop
     if (typeof props.onReady === 'function') {
       props.onReady(player);
     }
@@ -176,7 +177,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleError = (e) => {
 
-    //pass React Player prop to parent
+    //inherit React Player prop
     if (typeof props.onError === 'function') {
       props.onError(e);
     }
@@ -209,6 +210,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update playlist with the new track data
     const newPlaylist = updatePlaylistTrack(trackIndex,newTrack);
     setPlaylist(newPlaylist);
+
+
+  }
+
+  const handleEnded = (e) => {
+    //inherit React Player prop
+    if (typeof props.onEnded === 'function') {
+      props.onEnded(e);
+    }
+
+    const trackIndex = controls.track_index;
+    const queue = getPlayableTracksQueue(playlist,undefined,false,false);
+    const queueKeys = getArrayQueueKeys(playlist,queue);
+    const lastTrackIndex = queueKeys[queueKeys.length - 1];
+
+    //tell parent the last played track has ended
+    if (trackIndex === lastTrackIndex){
+      if (typeof props.onPlaylistEnded === 'function') {
+        props.onPlaylistEnded(e);
+      }
+    }
 
 
   }
@@ -406,12 +428,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //warn parent that data has been updated
   useEffect(() => {
-
-    if (typeof props.onUpdated === 'function') {
-      props.onUpdated(playlist,controls);
+    if (typeof props.onPlaylistUpdated === 'function') {
+      props.onPlaylistUpdated(playlist);
     }
+  }, [playlist]);
 
-  }, [playlist,controls]);
+  //warn parent that data has been updated
+  useEffect(() => {
+    if (typeof props.onControlsUpdated === 'function') {
+      props.onControlsUpdated(controls);
+    }
+  }, [controls]);
 
 
   //methods parent can use
@@ -481,19 +508,43 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   return (
     <div className="react-playlister">
       <ReactPlayer
-      ref={reactPlayerRef}
-      playing={props.playing}
-      url={url}
 
+      //props handled by ReactPlaylister
+      url={url}
+      loop={false}
+      ref={reactPlayerRef}
+
+      //inherit props
+      playing={props.playing}
+      controls={props.controls}
+      light={props.light}
+      volume={props.volume}
+      muted={props.muted}
+      playbackRate={props.playbackRate}
+      width={props.width}
+      height={props.height}
+      style={props.style}
+      progressInterval={props.progressInterval}
+      playsinline={props.playsinline}
+      pip={props.pip}
+      stopOnUnmount={props.stopOnUnmount}
+      fallback={props.fallback}
+      wrapper={props.wrapper}
+      playIcon={props.playIcon}
+      previewTabIndex={props.previewTabIndex}
+      config={props.config}
+
+      //Callback props handled by ReactPlaylister
       onReady={handleReady}
       onError={handleError}
+      onEnded={handleEnded}
 
+      //inherit methods
       onStart={props.onStart}
       onPlay={props.onPlay}
       onPause={props.onPause}
       onBuffer={props.onBuffer}
       onBufferEnd={props.onBufferEnd}
-      onEnded={props.onEnded}
       onDuration={props.onDuration}
       onSeek={props.onSeek}
       onProgress={props.onProgress}
