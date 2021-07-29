@@ -70,18 +70,34 @@
     ul{
       text-align:left;
       margin:0;
+      padding:0;
+      list-style:none;
+
       li{
         line-height:1.2em;
+        margin:0;
+        padding:0;
       }
     }
-    .track,.source{
+    .track{
+      margin:.5em 0;
+      > * {
+        margin-left:.5em;
+      }
+      border-left:5px solid white;
+      &.current{
+        border-left:5px solid #CCC;
+      }
       &:not(.playable){
         opacity:.5;
       }
     }
     .source{
+      &:not(.playable){
+        text-decoration: line-through;
+      }
       &.current{
-        text-decoration:underline;
+        font-weight:bold;
       }
     }
   }

@@ -6,15 +6,7 @@ export const AppFeedback = props => {
   const SourceFeedback = props => {
 
     return(
-      <span
-      className={
-        classNames({
-          source:true,
-          playable:props.playable,
-          current:props.current
-        })
-      }
-      >
+      <span>
       {props.url}
       </span>
     );
@@ -22,23 +14,39 @@ export const AppFeedback = props => {
 
   const TrackFeedback = props => {
 
-    return(
+    let content;
+
+    if (!props.sources.length){
+      content = <em>No sources</em>;
+    }else{
+      content =
       <ul>
-      {
-        props.sources.map((source,sourceKey) => {
-          const current = props.current && (props.source_index === sourceKey);
-          return(
-            <li key={sourceKey}>
-              <SourceFeedback
-              url={source.url}
-              playable={source.playable}
-              current={current}
-              />
-            </li>
-          )
-        })
-      }
+        {
+          props.sources.map((source,sourceKey) => {
+            const isCurrent = props.current && (props.source_index === sourceKey);
+            return(
+              <li
+              key={sourceKey}
+              className={
+                classNames({
+                  source:true,
+                  playable:source.playable,
+                  current:isCurrent
+                })
+              }
+              >
+                <SourceFeedback
+                url={source.url}
+                />
+              </li>
+            )
+          })
+        }
       </ul>
+    }
+
+    return(
+content
     );
 
   }
@@ -52,10 +60,16 @@ export const AppFeedback = props => {
         return (
           <li
           key={trackKey}
+          className={
+            classNames({
+              track:true,
+              playable:track.playable,
+              current:isCurrent
+            })
+          }
           >
             <TrackFeedback
             sources={track.sources}
-            playable={track.playable}
             current={isCurrent}
             source_index={source_index}
             />

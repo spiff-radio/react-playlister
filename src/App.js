@@ -14,7 +14,8 @@ function App() {
     'https://www.youtube.com/watch?v=E11DAkrjlP8',
     [
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
-      'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends'
+      'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends',
+      'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     [],
     [
@@ -129,7 +130,7 @@ function App() {
 
             <p>
               <strong>playing</strong>
-              <span>{playing ? 'true' : 'false'}</span>
+              <span>{playing ? 'true' : 'false'}</span>&nbsp;
               <button
               onClick={(e) => setPlaying(!playing)}
               >toggle</button>
@@ -137,7 +138,7 @@ function App() {
 
             <p>
               <strong>loop</strong>
-              <span>{loop ? 'true' : 'false'}</span>
+              <span>{loop ? 'true' : 'false'}</span>&nbsp;
               <button
               onClick={(e) => setLoop(!loop)}
               >toggle</button>
@@ -145,7 +146,7 @@ function App() {
 
             <p>
               <strong>shuffle</strong>
-              <span>{shuffle ? 'true' : 'false'}</span>
+              <span>{shuffle ? 'true' : 'false'}</span>&nbsp;
               <button
               onClick={(e) => setShuffle(!shuffle)}
               >toggle</button>
@@ -153,10 +154,11 @@ function App() {
 
             <p>
               <strong>autoskip</strong>
-              <span>{autoskip ? 'true' : 'false'}</span>
+              <span>{autoskip ? 'true' : 'false'}</span>&nbsp;
               <button
               onClick={(e) => setAutoskip(!autoskip)}
-              >toggle</button>
+              >toggle</button><br/>
+              <small>Ignore unplayable tracks when traversing the playlist; and automatically skip the track if it fires an error while trying to play it.</small>
             </p>
 
             <p>
