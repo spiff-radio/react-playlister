@@ -348,7 +348,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
 
     if (trackIndex === undefined) return;
-    if (sourceIndex === undefined) return;
 
     let newControls = {...controls};
 
