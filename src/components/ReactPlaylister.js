@@ -264,7 +264,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     }
 
-    const tracks = props.urls.map(
+    const urls = [].concat(props.urls || []);//force array
+
+    const tracks = urls.map(
       (v, i) => {
         return makeTrack(v,i)
       }
