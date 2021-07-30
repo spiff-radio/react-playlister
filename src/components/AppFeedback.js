@@ -42,7 +42,8 @@ export const AppFeedback = props => {
       <ul>
         {
           props.sources.map((source,sourceKey) => {
-            const isCurrent = props.current && (props.source_index === sourceKey);
+            const isActive = (props.source_index === sourceKey);
+            const isCurrent = props.current && isActive;
 
             return(
               <li
@@ -52,7 +53,8 @@ export const AppFeedback = props => {
                 classNames({
                   source:true,
                   playable:source.playable,
-                  current:isCurrent
+                  current:isCurrent,
+                  active:isActive
                 })
               }
               >
@@ -80,7 +82,7 @@ content
     {
       props.playlist.map((track,trackKey) => {
         const isCurrent = (props.controls.track_index === trackKey);
-        const source_index = isCurrent ? props.controls.source_index : undefined;
+        const source_index = track.current_source;
         return (
           <li
           key={trackKey}
