@@ -31,6 +31,7 @@ function App() {
 
   ]);
 
+  const [index,setIndex] = useState([3,1]);
   const [playerPlaylist, setPlayerPlaylist] = useState([]);
   const [playerControls, setPlayerControls] = useState({});
 
@@ -57,6 +58,11 @@ function App() {
     e.preventDefault();
     const player = playlisterRef.current.getReactPlayer();
     console.log(player);
+  }
+
+  const handleSourceSelect = (index) => {
+    console.log("APP / SOURCE SELECT",index);
+    setIndex(index);
   }
 
   const handleUpdateUrls = (e) => {
@@ -105,6 +111,7 @@ function App() {
           <AppFeedback
           playlist={playerPlaylist}
           controls={playerControls}
+          onSelect={handleSourceSelect}
           />
         </div>
       </div>
@@ -181,7 +188,7 @@ function App() {
 
       //props
       urls={urls}
-      index={[3,1]} //track index OR [track index,source index]
+      index={index} //track index OR [track index,source index]
       loop={loop}
       autoskip={autoskip}
 

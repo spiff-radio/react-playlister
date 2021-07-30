@@ -5,8 +5,16 @@ export const AppFeedback = props => {
 
   const SourceFeedback = props => {
 
+    const handleSourceSelect = (e) => {
+      if (typeof props.onSelect === 'function') {
+        props.onSelect([props.track_index,props.source_index]);
+      }
+    }
+
     return(
-      <span>
+      <span
+      onClick={handleSourceSelect}
+      >
       {props.url}
       </span>
     );
@@ -16,17 +24,30 @@ export const AppFeedback = props => {
 
     let content;
 
+    const handleTrackSelect = (e) => {
+      if (typeof props.onSelect === 'function') {
+        props.onSelect([props.track_index]);
+      }
+    }
+
     if (!props.sources.length){
-      content = <em>No sources</em>;
+
+      content =
+      <em
+      onClick={handleTrackSelect}
+      >No sources
+      </em>;
     }else{
       content =
       <ul>
         {
           props.sources.map((source,sourceKey) => {
             const isCurrent = props.current && (props.source_index === sourceKey);
+
             return(
               <li
               key={sourceKey}
+
               className={
                 classNames({
                   source:true,
@@ -37,6 +58,9 @@ export const AppFeedback = props => {
               >
                 <SourceFeedback
                 url={source.url}
+                track_index={props.track_index}
+                source_index={sourceKey}
+                onSelect={props.onSelect}
                 />
               </li>
             )
@@ -71,7 +95,9 @@ content
             <TrackFeedback
             sources={track.sources}
             current={isCurrent}
+            track_index={trackKey}
             source_index={source_index}
+            onSelect={props.onSelect}
             />
           </li>
         );

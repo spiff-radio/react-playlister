@@ -297,7 +297,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
 
-  }, []);
+  }, [props.index]);
 
   //if track/source index is not defined
   useEffect(() => {

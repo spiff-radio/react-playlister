@@ -80,6 +80,7 @@
       }
     }
     .track{
+      cursor: pointer;
       margin:.5em 0;
       > * {
         margin-left:.5em;
@@ -93,6 +94,7 @@
       }
     }
     .source{
+      cursor: pointer;
       &:not(.playable){
         text-decoration: line-through;
       }
