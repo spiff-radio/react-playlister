@@ -100,7 +100,7 @@
       }
       &.active{
         &:after{
-          content:" <";
+          content:" *";
         }
       }
       &.current{

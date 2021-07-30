@@ -344,11 +344,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
 
     const trackIndex = controls.track_index;
-    if (trackIndex === undefined) return;
     const track = playlist[trackIndex];
+    if (track === undefined) return;
 
     const sourceIndex = controls.source_index;
-    if (sourceIndex === undefined) return;
+    if ( (sourceIndex === undefined) && track.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
 
     let newControls = {...controls};
 
@@ -365,19 +365,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //SOURCE
+    const previousSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,true) : getSourcesQueue(track,sourceIndex,false,true) : [];
+    const nextSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,false) : getSourcesQueue(track,sourceIndex,false,false) : [];
+    const previousSourcesQueueKeys = getArrayQueueKeys(track.sources,previousSourcesQueue);
+    const nextSourcesQueueKeys = getArrayQueueKeys(track.sources,nextSourcesQueue);
 
-    if (track !== undefined){
-      const previousSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,true) : getSourcesQueue(track,sourceIndex,false,true) : [];
-      const nextSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,false) : getSourcesQueue(track,sourceIndex,false,false) : [];
-      const previousSourcesQueueKeys = getArrayQueueKeys(track.sources,previousSourcesQueue);
-      const nextSourcesQueueKeys = getArrayQueueKeys(track.sources,nextSourcesQueue);
-
-      newControls = {
-        ...newControls,
-        previous_sources:previousSourcesQueueKeys,
-        next_sources:nextSourcesQueueKeys
-      }
-
+    newControls = {
+      ...newControls,
+      previous_sources:previousSourcesQueueKeys,
+      next_sources:nextSourcesQueueKeys
     }
 
     setControls(newControls)
