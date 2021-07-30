@@ -296,7 +296,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       source_index:sourceIndex
     })
 
-
   }, [props.index]);
 
   //if track/source index is not defined
@@ -345,9 +344,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
 
     const trackIndex = controls.track_index;
-    const sourceIndex = controls.source_index;
-
     if (trackIndex === undefined) return;
+    const track = playlist[trackIndex];
+
+    const sourceIndex = controls.source_index;
+    if (sourceIndex === undefined) return;
 
     let newControls = {...controls};
 
@@ -364,7 +365,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //SOURCE
-    const track = playlist[trackIndex];
+
     if (track !== undefined){
       const previousSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,true) : getSourcesQueue(track,sourceIndex,false,true) : [];
       const nextSourcesQueue = (track.sources.length) ? autoskip ? getPlayableSourcesQueue(track,sourceIndex,false,false) : getSourcesQueue(track,sourceIndex,false,false) : [];
