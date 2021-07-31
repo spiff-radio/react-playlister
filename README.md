@@ -25,6 +25,13 @@ Prop | Description
 `onPlaylistUpdated` | Called when the playlist data has been updated.
 `onControlsUpdated` | Called when the playlist controls have been updated.
 `onPlaylistEnded` | Called when the last playable track of the playlist has ended.
+`filterPlayableTrack` | *You probably won't need this; use it only if you're sure of what you're doing* Allows you to filter the *playable* property of a track.<br/>eg.:<br/>
+```js
+const handleFilterPlayableTrack = (track,index,playable) => {
+  //alter the playable value here if needed
+  return playable;
+}
+```
 
 You can also set [the callback props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#callback-props).
 
