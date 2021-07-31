@@ -30,7 +30,7 @@ Prop | Description
 ##### Example of a function used with *filterPlayableTrack*
 
 ```js
-const handleFilterPlayableTrack = (track,index,playable) => {
+const handleFilterPlayableTrack = (track,trackIndex,playable) => {
   //alter the playable value here if needed
   return playable;
 }
