@@ -72,11 +72,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return getArrayQueue(playlist,index,loop,backwards);
   }
 
+  const checkPlayableTrack = (track,index) => {
+    let bool = track.playable;
+
+    //here's a chance to filter the playable tracks if you have a very specific need for it.
+    if (typeof props.filterPlayableTrack === 'function') {
+      bool = props.filterPlayableTrack(track,index,bool);
+    }
+
+    return bool;
+  }
+
   const getPlayableTracksQueue = (playlist,index,loop,backwards) => {
     let queue = getTracksQueue(playlist,index,loop,backwards);
-    queue = queue.filter(function (track) {
-      return track.playable;
-    });
+    queue = queue.filter(checkPlayableTrack);
 
     return queue;
   }
@@ -130,41 +139,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return (playableItems.length > 0);
   }
 
-  const updatePlaylistTrack = (trackIndex,newTrack) => {
-    //update item by index
-    //https://stackoverflow.com/questions/35628774/how-to-update-single-value-inside-specific-array-item-in-redux
-    const newPlaylist = playlist.map(
-      (track, i) => i === trackIndex ? newTrack : track
-    )
-
-    return newPlaylist;
-  }
-
-  const setUnplayableTrackSource = (trackIndex,sourceIndex,newSource) => {
-
-    const track = playlist[trackIndex];
-    console.log("track to update",track);
-
-    //update item by index
-    //https://stackoverflow.com/questions/35628774/how-to-update-single-value-inside-specific-array-item-in-redux
-    const newSources = track.sources.map(
-      (source, i) => i === sourceIndex ? {...source,playable:false} : source
-    )
-
-    let newTrack = {
-      ...track,
-      sources:newSources
-    }
-
-    //check wether track still can be played despite this unplayable source
-    newTrack = {
-      ...newTrack,
-      playable: hasPlayableSources(newTrack)
-    }
-
-    return newTrack;
-  }
-
   const handleReady = (player) => {
     setBackwards(false);//if we were skipping backwards, resets it.
 
@@ -203,14 +177,33 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           source_index:newSourceIndex,
         })
       }
+
+      //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
+      //https://github.com/facebook/react/issues/16858#issuecomment-534257343
+      setPlaylist(prevState => {
+
+        const newState =
+          prevState.map(
+            (track, i) => {
+              if (i === trackIndex){
+                const newSources = track.sources.map(
+                  (source, i) => i === sourceIndex ? {...source,playable:false} : source
+                )
+                return {
+                  ...track,
+                  sources:newSources
+                };
+              }else{
+                return track;
+              }
+            }
+          )
+
+          return newState;
+      });
+
+
     }
-
-    //update track; knowing this source is not playable
-    let newTrack = setUnplayableTrackSource(trackIndex,sourceIndex);
-    //update playlist with the new track data
-    const newPlaylist = updatePlaylistTrack(trackIndex,newTrack);
-    setPlaylist(newPlaylist);
-
 
   }
 
@@ -281,7 +274,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (props.index === undefined) return;
 
-    const indexes = [].concat(props.index || []);//force array (we might have passed the track index only)
+    const indexes = Array.isArray(props.index) ? props.index : [props.index];//force array
 
     const trackIndex = indexes[0];
     const sourceIndex = indexes[1];
@@ -394,12 +387,29 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = playlist[trackIndex];
     if (track === undefined) return;
 
-    DEBUG && console.log("SET SOURCE #"+sourceIndex+" AS LAST ACTIVE SOURCE FOR TRACK #"+trackIndex);
-    //update playlist with the new track data
-    const newPlaylist = updatePlaylistTrack(trackIndex,{...track,current_source:sourceIndex});
-    setPlaylist(newPlaylist);
+    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
+    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
+    setPlaylist(prevState => {
 
-  }, [controls.track_index,controls.source_index]);
+      const newState =
+        prevState.map(
+          (track, i) => {
+            if (i === trackIndex){
+              return {
+                ...track,
+                current_source:sourceIndex
+              };
+            }else{
+              return track;
+            }
+          }
+        )
+
+        return newState;
+    });
+
+
+  }, [controls.source_index]);
 
   //select source
   useEffect(() => {
