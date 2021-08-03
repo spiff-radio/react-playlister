@@ -313,6 +313,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //set default indices when component initializes
   useEffect(() => {
 
+    if ( !playlist.length) return;
     if (props.index === undefined) return;
 
     const indexes = Array.isArray(props.index) ? props.index : [props.index];//force array
@@ -332,7 +333,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     })
 
-  }, [props.index]);
+  }, [playlist,props.index]);
 
   //if track/source index is not defined
   useEffect(() => {
