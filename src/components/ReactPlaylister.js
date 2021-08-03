@@ -212,6 +212,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const handleEnded = (e) => {
+
     //inherit React Player prop
     if (typeof props.onEnded === 'function') {
       props.onEnded(e);
@@ -222,13 +223,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const queueKeys = getArrayQueueKeys(playlist,queue);
     const lastTrackIndex = queueKeys[queueKeys.length - 1];
 
+    if(autoskip){//skip to next track
+      nextTrack();
+    }
+
     //tell parent the last played track has ended
     if (trackIndex === lastTrackIndex){
       if (typeof props.onPlaylistEnded === 'function') {
         props.onPlaylistEnded(e);
       }
     }
-
 
   }
 
@@ -499,6 +503,81 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
   }, [controls]);
 
+  const previousTrack = () => {
+    const backwards = true;
+    setBackwards(backwards);
+    const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newIndex,
+          source_index:undefined
+        }
+      })
+    }
+  }
+
+  const nextTrack = () => {
+    const backwards = false;
+    setBackwards(backwards);
+    const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newIndex,
+          source_index:undefined
+        }
+      })
+    }
+  }
+
+  const skipTrack = () => {
+    const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newIndex,
+          source_index:undefined
+        }
+      })
+    }
+  }
+
+  const previousSource = () => {
+    setBackwards(true);//TOUFIX TOUCHECK
+    const track = playlist[controls.track_index];
+    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,true) : getNextSourceIndex(track,controls.source_index,props.loop,true)
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          source_index:newIndex
+        }
+      })
+    }
+  }
+
+  const nextSource = () => {
+    setBackwards(false);//TOUFIX TOUCHECK
+    const track = playlist[controls.track_index];
+    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,false) : getNextSourceIndex(track,controls.source_index,props.loop,false);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          source_index:newIndex
+        }
+      })
+    }
+  }
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
@@ -506,78 +585,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref,
       () => ({
         previousTrack() {
-          const backwards = true;
-          setBackwards(backwards);
-          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
-
-          if (newIndex !== undefined){
-            setControls(prevState => {
-              return{
-                ...prevState,
-                track_index:newIndex,
-                source_index:undefined
-              }
-            })
-          }
-
+          previousTrack();
         },
         nextTrack() {
-          const backwards = false;
-          setBackwards(backwards);
-          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
-
-          if (newIndex !== undefined){
-            setControls(prevState => {
-              return{
-                ...prevState,
-                track_index:newIndex,
-                source_index:undefined
-              }
-            })
-          }
+          nextTrack();
 
         },
         skipTrack() {
-          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
-
-          if (newIndex !== undefined){
-            setControls(prevState => {
-              return{
-                ...prevState,
-                track_index:newIndex,
-                source_index:undefined
-              }
-            })
-          }
-
+          skipTrack();
         },
         previousSource() {
-          setBackwards(true);//TOUFIX TOUCHECK
-          const track = playlist[controls.track_index];
-          const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,true) : getNextSourceIndex(track,controls.source_index,props.loop,true)
-
-          if (newIndex !== undefined){
-            setControls(prevState => {
-              return{
-                ...prevState,
-                source_index:newIndex
-              }
-            })
-          }
+          previousSource();
         },
         nextSource() {
-          setBackwards(false);//TOUFIX TOUCHECK
-          const track = playlist[controls.track_index];
-          const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,false) : getNextSourceIndex(track,controls.source_index,props.loop,false);
-
-          if (newIndex !== undefined){
-            setControls(prevState => {
-              return{
-                ...prevState,
-                source_index:newIndex
-              }
-            })
-          }
+          nextSource();
         },
         getReactPlayer(){
           return reactPlayerRef.current;
@@ -620,9 +641,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       onEnded={handleEnded}
 
       //inherit methods
-      onStart={props.onStart}
       onPlay={props.onPlay}
       onPause={props.onPause}
+      onStart={props.onStart}
       onBuffer={props.onBuffer}
       onBufferEnd={props.onBufferEnd}
       onDuration={props.onDuration}

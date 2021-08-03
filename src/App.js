@@ -54,6 +54,14 @@ function App() {
     console.log("PLAYLIST ENDED");
   }
 
+  const handlePlay = () =>{
+    setPlaying(true);
+  }
+
+  const handlePause = () =>{
+    setPlaying(false);
+  }
+
   const handleGetReactPlayer = (e) => {
     e.preventDefault();
     const player = playlisterRef.current.getReactPlayer();
@@ -220,13 +228,13 @@ function App() {
       onPlaylistEnded={handlePlaylistEnded}
 
       //ReactPlayer callback props
+      onPlay={handlePlay}
+      onPause={handlePause}
       /*
       onReady={}
       onStart={}
-      onPlay={}
       onProgress={}
       onDuration={}
-      onPause={}
       onBuffer={}
       onBufferEnd={}
       onSeek={}
