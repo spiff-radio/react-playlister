@@ -72,12 +72,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return getArrayQueue(playlist,index,loop,backwards);
   }
 
-  const checkPlayableTrack = (track,index) => {
+  const checkPlayableTrack = (track) => {
     let bool = track.playable;
 
     //here's a chance to filter the playable tracks if you have a very specific need for it.
     if (typeof props.filterPlayableTrack === 'function') {
-      bool = props.filterPlayableTrack(track,index,bool);
+      const trackIndex = playlist.indexOf(track);
+      bool = props.filterPlayableTrack(track,trackIndex,bool);
     }
 
     return bool;
