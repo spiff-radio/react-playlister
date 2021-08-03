@@ -262,13 +262,50 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const urls = [].concat(props.urls || []);//force array
 
-    const tracks = urls.map(
+    const newPlaylist = urls.map(
       (v, i) => {
         return makeTrack(v,i)
       }
     );
 
-    setPlaylist(tracks);
+
+    //try to restore previous values of current_source
+    /*TOUFIX TO IMPROVE ? URGENT
+    if (playlist.length){//we have an old playlist record
+
+
+      //current_source
+      newPlaylist.forEach(function(track,i){
+
+        const oldTrack = playlist[i];
+
+        if (oldTrack){
+          const oldSourceIndex = oldTrack.current_source;
+
+          if (oldSourceIndex){
+              const oldSource = oldTrack.sources[oldSourceIndex];
+              const oldSourceUrl = oldSource.url;
+
+              const newSource = track.sources.find(source => {
+                return source.url === oldSourceUrl
+              })
+
+              const newSourceIndex = track.sources.indexOf(newSource);
+
+              if (newSourceIndex !== -1){
+                  newPlaylist[i].current_source = newSourceIndex;
+              }
+
+          }
+        }
+
+
+      })
+    }
+    */
+
+
+    setPlaylist(newPlaylist);
 
   }, [props.urls]);
 
