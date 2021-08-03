@@ -171,10 +171,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       if (newTrackIndex !== undefined){
         DEBUG && console.log("FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
-        setControls({
-          ...controls,
-          track_index:newTrackIndex,
-          source_index:newSourceIndex,
+
+        setControls(prevState => {
+          return{
+            ...prevState,
+            track_index:newTrackIndex,
+            source_index:newSourceIndex
+          }
         })
       }
 
@@ -283,10 +286,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("SET INDEXES FROM PROP AT INIT",indexes);
 
-    setControls({
-      ...controls,
-      track_index:trackIndex,
-      source_index:sourceIndex
+    setControls(prevState => {
+      return{
+        ...prevState,
+        track_index:trackIndex,
+        source_index:sourceIndex
+      }
     })
 
   }, [props.index]);
@@ -325,10 +330,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     }
 
-    setControls({
-      ...controls,
-      track_index:trackIndex,
-      source_index:sourceIndex,
+    setControls(prevState => {
+      return{
+        ...prevState,
+        track_index:trackIndex,
+        source_index:sourceIndex
+      }
     })
 
   }, [playlist,controls.track_index,controls.source_index]);
@@ -343,7 +350,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
     if ( (sourceIndex === undefined) && track.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
 
-    let newControls = {...controls};
+    let appendControls = {};
 
     //TRACK
     const previousTracksQueue = (playlist.length) ? autoskip ? getPlayableTracksQueue(playlist,trackIndex,props.loop,true) : getTracksQueue(playlist,trackIndex,props.loop,true) : [];
@@ -351,8 +358,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const previousTracksQueueKeys = getArrayQueueKeys(playlist,previousTracksQueue);
     const nextTracksQueueKeys = getArrayQueueKeys(playlist,nextTracksQueue);
 
-    newControls = {
-      ...newControls,
+    appendControls = {
+      ...appendControls,
       previous_tracks:  previousTracksQueueKeys,
       next_tracks:      nextTracksQueueKeys
     }
@@ -363,13 +370,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const previousSourcesQueueKeys = getArrayQueueKeys(track.sources,previousSourcesQueue);
     const nextSourcesQueueKeys = getArrayQueueKeys(track.sources,nextSourcesQueue);
 
-    newControls = {
-      ...newControls,
+    appendControls = {
+      ...appendControls,
       previous_sources:previousSourcesQueueKeys,
       next_sources:nextSourcesQueueKeys
     }
 
-    setControls(newControls)
+    setControls(prevState => {
+      return{
+        ...prevState,
+        ...appendControls
+      }
+    })
 
 
   }, [controls.track_index,controls.source_index,props.loop]);
@@ -459,10 +471,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,true) : getNextTrackIndex(playlist,controls.track_index,props.loop,true);
 
           if (newIndex !== undefined){
-            setControls({
-              ...controls,
-              track_index:newIndex,
-              source_index:undefined
+            setControls(prevState => {
+              return{
+                ...prevState,
+                track_index:newIndex,
+                source_index:undefined
+              }
             })
           }
 
@@ -472,10 +486,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,false) : getNextTrackIndex(playlist,controls.track_index,props.loop,false);
 
           if (newIndex !== undefined){
-            setControls({
-              ...controls,
-              track_index:newIndex,
-              source_index:undefined
+            setControls(prevState => {
+              return{
+                ...prevState,
+                track_index:newIndex,
+                source_index:undefined
+              }
             })
           }
 
@@ -486,9 +502,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,true) : getNextSourceIndex(track,controls.source_index,props.loop,true)
 
           if (newIndex !== undefined){
-            setControls({
-              ...controls,
-              source_index:newIndex
+            setControls(prevState => {
+              return{
+                ...prevState,
+                source_index:newIndex
+              }
             })
           }
         },
@@ -498,9 +516,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,false) : getNextSourceIndex(track,controls.source_index,props.loop,false);
 
           if (newIndex !== undefined){
-            setControls({
-              ...controls,
-              source_index:newIndex
+            setControls(prevState => {
+              return{
+                ...prevState,
+                source_index:newIndex
+              }
             })
           }
         },
