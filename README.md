@@ -45,8 +45,9 @@ Use [`ref`](https://facebook.github.io/react/docs/refs-and-the-dom.html) to call
 
 Method | Description
 ------ | -----------
-`previousTrack()` | Go to the previous track - or previous playable track if `autoskip` is set to `true`.
-`nextTrack()` | Go to the next track - or next playable track if `autoskip` is set to `true`.
+`previousTrack()` | Go to the previous track (*playable track* if `autoskip` is set to `true`).
+`nextTrack()` | Go to the next track / (*playable track* if `autoskip` is set to `true`).
+`skipTrack()` | Go to the previous or next track (*playable track* if `autoskip` is set to `true`); depending on the current playing direction.
 `previousSource()` | Go to the previous track source - or previous playable track source if `autoskip` is set to `true`.
 `nextSource()` | Go to the next track source - or next playable track source if `autoskip` is set to `true`.
 `getReactPlayer()` | Returns the `ReactPlayer` component instance.

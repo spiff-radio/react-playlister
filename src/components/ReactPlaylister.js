@@ -504,8 +504,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref,
       () => ({
         previousTrack() {
-          setBackwards(true);
-          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,true) : getNextTrackIndex(playlist,controls.track_index,props.loop,true);
+          const backwards = true;
+          setBackwards(backwards);
+          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
 
           if (newIndex !== undefined){
             setControls(prevState => {
@@ -519,8 +520,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
         },
         nextTrack() {
-          setBackwards(false);
-          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,false) : getNextTrackIndex(playlist,controls.track_index,props.loop,false);
+          const backwards = false;
+          setBackwards(backwards);
+          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
+
+          if (newIndex !== undefined){
+            setControls(prevState => {
+              return{
+                ...prevState,
+                track_index:newIndex,
+                source_index:undefined
+              }
+            })
+          }
+
+        },
+        skipTrack() {
+          const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,backwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,backwards);
 
           if (newIndex !== undefined){
             setControls(prevState => {
