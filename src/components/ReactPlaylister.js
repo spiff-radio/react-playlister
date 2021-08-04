@@ -211,11 +211,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const handleEnded = (e) => {
+  const handleEnded = () => {
 
     //inherit React Player prop
     if (typeof props.onEnded === 'function') {
-      props.onEnded(e);
+      props.onEnded();
     }
 
     const trackIndex = controls.track_index;
@@ -223,15 +223,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const queueKeys = getArrayQueueKeys(playlist,queue);
     const lastTrackIndex = queueKeys[queueKeys.length - 1];
 
-    if(autoskip){//skip to next track
+    if ( (trackIndex === lastTrackIndex) && (typeof props.onPlaylistEnded === 'function') ) { //tell parent the last played track has ended
+      props.onPlaylistEnded();
+    }else if(autoskip){//skip to next track
       nextTrack();
-    }
-
-    //tell parent the last played track has ended
-    if (trackIndex === lastTrackIndex){
-      if (typeof props.onPlaylistEnded === 'function') {
-        props.onPlaylistEnded(e);
-      }
     }
 
   }
