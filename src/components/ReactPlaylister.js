@@ -248,7 +248,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       let track = {
         sources:sources,
-        current_source:undefined
+        current_source:sources.length ? 0 : undefined
       }
 
       track = {
