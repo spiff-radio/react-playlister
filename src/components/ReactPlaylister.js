@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
+import classNames from "classnames";
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
 
@@ -23,6 +24,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     previous_sources:[]
   });
 
+  const [source, setSource] = useState();
   const [url, setUrl] = useState();//current url
 
   //build a queue of keys based on an array
@@ -423,25 +425,49 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //select source
   useEffect(() => {
 
-    let newUrl = undefined;
+    let newSource = undefined;
     const trackIndex = controls.track_index;
     const sourceIndex = controls.source_index;
 
     if (trackIndex !== undefined){
       const track = playlist[trackIndex];
-      if ( (track !== undefined) && (sourceIndex !== undefined) ){
+      if (track !== undefined){
+        if (track.sources.length){
+          if (sourceIndex !== undefined){
+            newSource = track.sources[sourceIndex];
+          }
+        }else if (props.playing && autoskip){
+          DEBUG && console.log("NO SOURCES FOR PLAYING TRACK #"+trackIndex+", SKIP IT");
+          skipTrack();
+          return;
+        }
+      }
 
-        const source = track.sources[sourceIndex];
+    }
 
-        if (source !== undefined){
-          newUrl = source.url;
+    setSource(newSource);
+
+  }, [controls]);
+
+  //set player URL.
+  //We set it ONLY if the source is defined;
+  //because if we pass an undefined value; a player that is in a background tab will freeze between two tracks.
+  //https://github.com/cookpete/react-player/issues/1177#issuecomment-781929517
+  useEffect(() => {
+    DEBUG && console.log("SET SOURCE",source);
+    if (source){
+      if (url !== source.url){
+          setUrl(source.url);
+      }else{
+        //if that source has already played, resets it.
+        const played = reactPlayerRef.current.getCurrentTime();
+        if (played){
+          DEBUG && console.log("RESET SOURCE",source);
+          reactPlayerRef.current.seekTo(0);
         }
       }
     }
-
-    setUrl(newUrl);
-
-  }, [controls]);
+  }, [source]);
 
   //warn parent that data has been updated
   useEffect(() => {
@@ -607,7 +633,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className="react-playlister">
+    <div
+    className={classNames({
+      'react-playlister':  true,
+      'no-source':       (!source)
+    })}
+    >
       <ReactPlayer
 
       //props handled by ReactPlaylister
@@ -616,7 +647,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={props.playing}
+      playing={!source ? false : props.playing}
       controls={props.controls}
       light={props.light}
       volume={props.volume}

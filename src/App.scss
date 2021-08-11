@@ -41,6 +41,10 @@
   > div {
     margin:auto;
   }
+  &.no-source > div{
+    opacity:.25;
+    pointer-events:none;
+  }
 }
 
 #feedback{
