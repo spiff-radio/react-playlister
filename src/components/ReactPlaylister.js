@@ -160,53 +160,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const trackIndex = controls.track_index;
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
-    const source = track.sources[sourceIndex];
 
     DEBUG && console.log("NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
 
     //skip automatically if the player is playing
     if (props.playing && autoskip){
-
-      const newSourceIndex = getNextPlayableSourceIndex(track,sourceIndex);//try to find another playable source for this track
-      const newTrackIndex = (newSourceIndex === undefined) ? getNextPlayableTrackIndex(playlist,trackIndex,props.loop,backwards) : trackIndex;
-
-      if (newTrackIndex !== undefined){
-        DEBUG && console.log("FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
-
-        setControls(prevState => {
-          return{
-            ...prevState,
-            track_index:newTrackIndex,
-            source_index:newSourceIndex
-          }
-        })
-      }
-
-      //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
-      //https://github.com/facebook/react/issues/16858#issuecomment-534257343
-      setPlaylist(prevState => {
-
-        const newState =
-          prevState.map(
-            (track, i) => {
-              if (i === trackIndex){
-                const newSources = track.sources.map(
-                  (source, i) => i === sourceIndex ? {...source,playable:false} : source
-                )
-                return {
-                  ...track,
-                  sources:newSources
-                };
-              }else{
-                return track;
-              }
-            }
-          )
-
-          return newState;
-      });
-
-
+      skipSource();
     }
 
   }
@@ -542,6 +501,52 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       })
     }
+  }
+
+  const skipSource = () => {
+
+    const trackIndex = controls.track_index;
+    const sourceIndex = controls.source_index;
+    const track = playlist[trackIndex];
+
+    const newSourceIndex = getNextPlayableSourceIndex(track,sourceIndex);//try to find another playable source for this track
+    const newTrackIndex = (newSourceIndex === undefined) ? getNextPlayableTrackIndex(playlist,trackIndex,props.loop,backwards) : trackIndex;
+
+    if (newTrackIndex !== undefined){
+      DEBUG && console.log("FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
+
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newTrackIndex,
+          source_index:newSourceIndex
+        }
+      })
+    }
+
+    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
+    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
+    setPlaylist(prevState => {
+
+      const newState =
+        prevState.map(
+          (track, i) => {
+            if (i === trackIndex){
+              const newSources = track.sources.map(
+                (source, i) => i === sourceIndex ? {...source,playable:false} : source
+              )
+              return {
+                ...track,
+                sources:newSources
+              };
+            }else{
+              return track;
+            }
+          }
+        )
+
+        return newState;
+    });
   }
 
   const previousSource = () => {
