@@ -10,6 +10,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
   const loop = (props.loop !== undefined) ? props.loop : false;
+  const [playRequest,setPlayRequest] = useState(props.playing);
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
   const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
@@ -166,7 +167,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     DEBUG && console.log("NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
 
     //skip automatically if the player is playing
-    if (props.playing && autoskip){
+    if (playRequest && autoskip){
       skipSource();
     }
 
@@ -191,6 +192,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
   }
+
+  //inherit prop
+  useEffect(() => {
+    setPlayRequest(props.playing);
+  }, [props.playing]);
 
   //build our initial data
   useEffect(() => {
@@ -436,7 +442,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           if (sourceIndex !== undefined){
             newSource = track.sources[sourceIndex];
           }
-        }else if (props.playing && autoskip){
+        }else if (playRequest && autoskip){
           DEBUG && console.log("NO SOURCES FOR PLAYING TRACK #"+trackIndex+", SKIP IT");
           skipTrack();
           return;
@@ -453,6 +459,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //We set it ONLY if the source is defined;
   //because if we pass an undefined value; a player that is in a background tab will freeze between two tracks.
   //https://github.com/cookpete/react-player/issues/1177#issuecomment-781929517
+  //https://bugs.chromium.org/p/chromium/issues/detail?id=1244074
   useEffect(() => {
     DEBUG && console.log("SET SOURCE",source);
     if (source){
@@ -647,7 +654,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={!source ? false : props.playing}
+      playing={playRequest}
       controls={props.controls}
       light={props.light}
       volume={props.volume}

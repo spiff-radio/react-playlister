@@ -37,7 +37,7 @@ function App() {
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
-  const [doPlay, setDoPlay] = useState(false);
+  const [playRequest, setPlayRequest] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
@@ -56,10 +56,12 @@ function App() {
   }
 
   const handlePlay = () =>{
+    setPlayRequest(true);
     setPlaying(true);
   }
 
   const handlePause = () =>{
+    setPlayRequest(false);
     setPlaying(false);
   }
 
@@ -156,7 +158,7 @@ function App() {
               <strong>playing</strong>
               <span>{playing ? 'true' : 'false'}</span>&nbsp;
               <button
-              onClick={(e) => setDoPlay(!playing)}
+              onClick={(e) => setPlayRequest(!playing)}
               >toggle</button>
             </p>
 
@@ -202,7 +204,7 @@ function App() {
       autoskip={autoskip}
 
       //ReactPlayer props
-      playing={doPlay}
+      playing={playRequest}
       controls={true}
       /*
       light={}
