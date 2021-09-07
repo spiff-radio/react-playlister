@@ -10,7 +10,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
   const loop = (props.loop !== undefined) ? props.loop : false;
-  const [playRequest,setPlayRequest] = useState(props.playing);
+  const playRequest = (props.playing !== undefined) ? props.playing : false;
   const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
   const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
   const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
@@ -192,11 +192,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
   }
-
-  //inherit prop
-  useEffect(() => {
-    setPlayRequest(props.playing);
-  }, [props.playing]);
 
   //build our initial data
   useEffect(() => {
@@ -654,7 +649,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={playRequest}
+      playing={!source ? false : playRequest}
       controls={props.controls}
       light={props.light}
       volume={props.volume}
