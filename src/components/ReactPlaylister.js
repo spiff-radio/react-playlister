@@ -10,12 +10,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = (props.loop !== undefined) ? props.loop : false;
   const playRequest = (props.playing !== undefined) ? props.playing : false;
 
+  //when a URL does not play, skip to next one ?
+  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true;
+
+  //should we skip if an error is fired ?
   const skipError = (props.skipError !== undefined) ? props.skipError : true;
+
+  //should we skip if the track ends ?
   const skipEnded = (props.skipEnded !== undefined) ? props.skipEnded : true;
+
+  //should we skip if track has no sources ?
   const skipNoSources = (props.skipNoSources !== undefined) ? props.skipNoSources : true;
-  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true; //when a URL does not play, skip to next one ?
+
+  //do we iterate URLs backwards ?
+  const [backwards,setBackwards] = useState(false);
+
+  //shuffle mode
   const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
-  const [backwards,setBackwards] = useState(false);//do we iterate URLs backwards ?
 
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas
   const [controls,setControls] = useState({
@@ -27,8 +38,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     previous_sources:[]
   });
 
-  //when a source is switched, will help us temporary pause the player so we don't have a sound bug when switching.
-  const [sourceSkip, setSourceSkip] = useState(false);
+  //when a source is loaded,
+  //will a us temporary pause the player so we don't have a sound bug when switching sources.
+  const [sourceToggle, setSourceToggle] = useState(false);
 
   const [source, setSource] = useState();
   const [url, setUrl] = useState();//current url
@@ -80,7 +92,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return getArrayQueue(playlist,index,loop,backwards);
   }
 
-  const checkPlayableTrack = (track) => {
+  const isPlayableTrack = (track) => {
     let bool = track.playable;
 
     //here's a chance to filter the playable tracks if you have a very specific need for it.
@@ -92,9 +104,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return bool;
   }
 
+  const isPlayableSource = (source) => {
+    return source.playable;
+  }
+
   const getPlayableTracksQueue = (playlist,index,loop,backwards) => {
     let queue = getTracksQueue(playlist,index,loop,backwards);
-    queue = queue.filter(checkPlayableTrack);
+
+    //filter playable tracks
+    return queue.filter(isPlayableTrack);
 
     return queue;
   }
@@ -144,12 +162,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const hasPlayableSources = track => {
-      let playableItems = track.sources.filter(source => source.playable);
-      return (playableItems.length > 0);
+      let playableItems = track.sources.filter(isPlayableSource);
+      return (track.sources.filter(isPlayableSource).length > 0);
   }
 
   const handleReady = (player) => {
     setBackwards(false);//if we were skipping backwards, resets it.
+
+    const trackIndex = controls.track_index;
+    const sourceIndex = controls.source_index;
+    const track = playlist[trackIndex];
+    const source = track.sources[sourceIndex];
+
+    console.log("REACTPLAYLISTER / SOURCE #"+sourceIndex+" READY",source);
+    console.log("REACTPLAYLISTER / FOR TRACK #"+trackIndex,track);
 
     //inherit React Player prop
     if (typeof props.onReady === 'function') {
@@ -201,26 +227,33 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //build our initial data
   useEffect(() => {
 
+    const getDomain = (url) => {
+      let output = new URL(url).hostname;
+      return output.split(".").slice(-2).join("."); //no www's
+    }
+
     const makeTrack = (urls,track_index) => {
 
       urls = [].concat(urls || []);//force array (it might be a single URL string)
       urls = urls.flat(Infinity);//flatten
 
       const sources = urls.map(function(url) {
+
         return {
           url:url,
-          playable:ReactPlayer.canPlay(url)
+          playable:ReactPlayer.canPlay(url),
+          domain:getDomain(url)
         }
       });
 
       let track = {
-        sources:sources,
-        current_source:sources.length ? 0 : undefined
+        sources:sources
       }
 
       track = {
         ...track,
-        playable: hasPlayableSources(track)
+        playable: hasPlayableSources(track),
+        current_source: getNextPlayableSourceIndex(track)//default source index
       }
 
       return track;
@@ -321,7 +354,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       //use the previously selected source (if any)...
       sourceIndex = (track.current_source !== undefined) ? track.current_source : undefined;
-      //...except if autoskip is enabled and that the source is not playable
+      //...except if auto skip is enabled and that the source is not playable
       const source = track.sources[sourceIndex];
       sourceIndex = ( (source !== undefined) && autoskip && !source.playable ) ? undefined : sourceIndex;
 
@@ -461,7 +494,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //https://github.com/cookpete/react-player/issues/1177#issuecomment-781929517
   //https://bugs.chromium.org/p/chromium/issues/detail?id=1244074
   useEffect(() => {
-    setSourceSkip(true);
+    setSourceToggle(true);
     DEBUG && console.log("REACTPLAYLISTER / SET SOURCE",source);
     if (source){
       if (url !== source.url){
@@ -479,7 +512,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   useEffect(() => {
     if (url){
-      setSourceSkip(false);
+      setSourceToggle(false);
     }
   }, [url]);
 
@@ -644,7 +677,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     <div
     className={classNames({
       'react-playlister':  true,
-      'no-source':       sourceSkip
+      'no-source':       sourceToggle
     })}
     >
       <ReactPlayer
@@ -655,7 +688,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={sourceSkip ? false : playRequest}
+      playing={sourceToggle ? false : playRequest}
       controls={props.controls}
       light={props.light}
       volume={props.volume}
