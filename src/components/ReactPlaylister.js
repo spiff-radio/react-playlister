@@ -7,26 +7,26 @@ const DEBUG = (process.env.NODE_ENV !== 'production');
 export const ReactPlaylister = forwardRef((props, ref) => {
 
   const reactPlayerRef = useRef();
-  const loop = (props.loop !== undefined) ? props.loop : false;
-  const playRequest = (props.playing !== undefined) ? props.playing : false;
+
+  const playRequest = props.playing ?? false;
+
+  const loop = props.loop ?? false;
+  const shuffle = props.shuffle ?? false;
 
   //when a URL does not play, skip to next one ?
-  const autoskip = (props.autoskip !== undefined) ? props.autoskip : true;
+  const autoskip = props.autoskip ?? true;
 
   //should we skip if an error is fired ?
-  const skipError = (props.skipError !== undefined) ? props.skipError : true;
+  const skipError = props.skipError ?? true;
 
   //should we skip if the track ends ?
-  const skipEnded = (props.skipEnded !== undefined) ? props.skipEnded : true;
+  const skipEnded = props.skipEnded ?? true;
 
   //should we skip if track has no sources ?
-  const skipNoSources = (props.skipNoSources !== undefined) ? props.skipNoSources : true;
+  const skipNoSources = props.skipNoSources ?? true;
 
   //do we iterate URLs backwards ?
   const [backwards,setBackwards] = useState(false);
-
-  //shuffle mode
-  const shuffle = (props.shuffle !== undefined) ? props.shuffle : false;
 
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas
   const [controls,setControls] = useState({
@@ -162,11 +162,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const hasPlayableSources = track => {
-      let playableItems = track.sources.filter(isPlayableSource);
-      return (track.sources.filter(isPlayableSource).length > 0);
+    return (track.sources.filter(isPlayableSource).length > 0);
   }
 
-  const handleReady = (player) => {
+  const handleSourceReady = (player) => {
     setBackwards(false);//if we were skipping backwards, resets it.
 
     const trackIndex = controls.track_index;
@@ -184,7 +183,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const handleError = (e) => {
+  const handleSourceError = (e) => {
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -193,7 +192,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const trackIndex = controls.track_index;
     const sourceIndex = controls.source_index;
-    const track = playlist[trackIndex];
 
     DEBUG && console.log("REACTPLAYLISTER / NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
 
@@ -204,7 +202,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const handleEnded = () => {
+  const handleSourceEnded = () => {
 
     //inherit React Player prop
     if (typeof props.onEnded === 'function') {
@@ -216,12 +214,134 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const queueKeys = getArrayQueueKeys(playlist,queue);
     const lastTrackIndex = queueKeys[queueKeys.length - 1];
 
-    if ( (trackIndex === lastTrackIndex) && (typeof props.onPlaylistEnded === 'function') ) { //tell parent the last played track has ended
-      props.onPlaylistEnded();
+    if ( (trackIndex === lastTrackIndex) ) { //tell parent the last played track has ended
+      handlePlaylistEnded();
     }else if(skipEnded){//skip to next track
       nextTrack();
     }
 
+  }
+
+  const handlePlaylistEnded = () => {
+    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST ENDED");
+    if(typeof props.onPlaylistEnded === 'function'){
+      props.onPlaylistEnded();
+    }
+  }
+
+  const skipTrack = (newBackwards) => {
+
+    //also set the backwards state if defined
+    let doBackwards = backwards; //default value
+    let backwardsMsg = '';
+    if (newBackwards !== undefined){
+      setBackwards(newBackwards);
+      doBackwards = newBackwards;
+      backwardsMsg = doBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+    }
+
+    const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,doBackwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,doBackwards);
+
+    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newIndex,
+          source_index:undefined
+        }
+      })
+    }else{ //no playable tracks
+      DEBUG && console.log("REACTPLAYLISTER / NO PLAYABLE TRACKS");
+      handlePlaylistEnded();
+    }
+  }
+
+  const previousTrack = () => {
+    skipTrack(true);
+  }
+
+  const nextTrack = () => {
+    skipTrack(false);
+  }
+
+  const skipSource = () => {
+
+    DEBUG && console.log("REACTPLAYLISTER / SKIP SOURCE");
+
+    const trackIndex = controls.track_index;
+    const sourceIndex = controls.source_index;
+    const track = playlist[trackIndex];
+
+    const newSourceIndex = getNextPlayableSourceIndex(track,sourceIndex);//try to find another playable source for this track
+    const newTrackIndex = (newSourceIndex === undefined) ? getNextPlayableTrackIndex(playlist,trackIndex,props.loop,backwards) : trackIndex;
+
+    if (newTrackIndex !== undefined){
+      DEBUG && console.log("REACTPLAYLISTER / FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
+
+      setControls(prevState => {
+        return{
+          ...prevState,
+          track_index:newTrackIndex,
+          source_index:newSourceIndex
+        }
+      })
+    }
+
+    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
+    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
+    setPlaylist(prevState => {
+
+      const newState =
+        prevState.map(
+          (track, i) => {
+            if (i === trackIndex){
+              const newSources = track.sources.map(
+                (source, i) => i === sourceIndex ? {...source,playable:false} : source
+              )
+              return {
+                ...track,
+                sources:newSources
+              };
+            }else{
+              return track;
+            }
+          }
+        )
+
+        return newState;
+    });
+  }
+
+  const previousSource = () => {
+    setBackwards(true);//TOUFIX TOUCHECK
+    const track = playlist[controls.track_index];
+    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,true) : getNextSourceIndex(track,controls.source_index,props.loop,true)
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          source_index:newIndex
+        }
+      })
+    }
+  }
+
+  const nextSource = () => {
+    setBackwards(false);//TOUFIX TOUCHECK
+    const track = playlist[controls.track_index];
+    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,false) : getNextSourceIndex(track,controls.source_index,props.loop,false);
+
+    if (newIndex !== undefined){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          source_index:newIndex
+        }
+      })
+    }
   }
 
   //build our initial data
@@ -516,8 +636,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
   }, [url]);
 
-
-
   //warn parent that data has been updated
   useEffect(() => {
     if (typeof props.onPlaylistUpdated === 'function') {
@@ -531,121 +649,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onControlsUpdated(controls);
     }
   }, [controls]);
-
-  const skipTrack = (newBackwards) => {
-
-    //also set the backwards state if defined
-    let doBackwards = backwards; //default value
-    let backwardsMsg = '';
-    if (newBackwards !== undefined){
-      setBackwards(newBackwards);
-      doBackwards = newBackwards;
-      backwardsMsg = doBackwards ? ' TO PREVIOUS' : ' TO NEXT';
-    }
-
-    const newIndex = autoskip ? getNextPlayableTrackIndex(playlist,controls.track_index,props.loop,doBackwards) : getNextTrackIndex(playlist,controls.track_index,props.loop,doBackwards);
-
-    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
-
-    if (newIndex !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          track_index:newIndex,
-          source_index:undefined
-        }
-      })
-    }else{ //no playable tracks
-      //TOUFIX onPlaylistError prop ?
-      alert("NO PLAYABLE TRACKS");
-    }
-  }
-
-  const previousTrack = () => {
-    skipTrack(true);
-  }
-
-  const nextTrack = () => {
-    skipTrack(false);
-  }
-
-  const skipSource = () => {
-
-    DEBUG && console.log("REACTPLAYLISTER / SKIP SOURCE");
-
-    const trackIndex = controls.track_index;
-    const sourceIndex = controls.source_index;
-    const track = playlist[trackIndex];
-
-    const newSourceIndex = getNextPlayableSourceIndex(track,sourceIndex);//try to find another playable source for this track
-    const newTrackIndex = (newSourceIndex === undefined) ? getNextPlayableTrackIndex(playlist,trackIndex,props.loop,backwards) : trackIndex;
-
-    if (newTrackIndex !== undefined){
-      DEBUG && console.log("REACTPLAYLISTER / FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
-
-      setControls(prevState => {
-        return{
-          ...prevState,
-          track_index:newTrackIndex,
-          source_index:newSourceIndex
-        }
-      })
-    }
-
-    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
-    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
-    setPlaylist(prevState => {
-
-      const newState =
-        prevState.map(
-          (track, i) => {
-            if (i === trackIndex){
-              const newSources = track.sources.map(
-                (source, i) => i === sourceIndex ? {...source,playable:false} : source
-              )
-              return {
-                ...track,
-                sources:newSources
-              };
-            }else{
-              return track;
-            }
-          }
-        )
-
-        return newState;
-    });
-  }
-
-  const previousSource = () => {
-    setBackwards(true);//TOUFIX TOUCHECK
-    const track = playlist[controls.track_index];
-    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,true) : getNextSourceIndex(track,controls.source_index,props.loop,true)
-
-    if (newIndex !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          source_index:newIndex
-        }
-      })
-    }
-  }
-
-  const nextSource = () => {
-    setBackwards(false);//TOUFIX TOUCHECK
-    const track = playlist[controls.track_index];
-    const newIndex = autoskip ? getNextPlayableSourceIndex(track,controls.source_index,props.loop,false) : getNextSourceIndex(track,controls.source_index,props.loop,false);
-
-    if (newIndex !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          source_index:newIndex
-        }
-      })
-    }
-  }
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
@@ -708,9 +711,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       config={props.config}
 
       //Callback props handled by ReactPlaylister
-      onReady={handleReady}
-      onError={handleError}
-      onEnded={handleEnded}
+      onReady={handleSourceReady}
+      onError={handleSourceError}
+      onEnded={handleSourceEnded}
 
       //inherit methods
       onPlay={props.onPlay}
