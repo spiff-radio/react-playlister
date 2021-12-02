@@ -197,13 +197,25 @@ function App() {
       <ReactPlaylister
       ref={playlisterRef}
 
-      //props
+      /*
+      props
+      */
+
+      //URLs input array.
+      //It can be single-level array (each item is a source);
+      //or two-levels (each item is a track; which means an array of sources)
       urls={urls}
-      index={index} //track index OR [track index,source index]
+      //force select an item.
+      //if your input is single-level; set the source index
+      //if your input is two-levels; either the track index OR the [track index, source index]
+      index={index}
       loop={loop}
       autoskip={autoskip}
 
-      //ReactPlayer props
+      /*
+      ReactPlayer props
+      */
+      
       playing={playRequest}
       controls={true}
       /*
