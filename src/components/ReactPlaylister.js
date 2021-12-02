@@ -25,8 +25,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //should we skip if track has no sources ?
   const skipNoSources = props.skipNoSources ?? true;
 
+  //are we currently skipping ?
+  const [skipping,setSkipping] = useState(false);
+
   //do we iterate URLs backwards ?
   const [backwards,setBackwards] = useState(false);
+
 
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas
   const [controls,setControls] = useState({
@@ -166,6 +170,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const handleSourceReady = (player) => {
+    setSkipping(false);//if we were skipping
     setBackwards(false);//if we were skipping backwards, resets it.
 
     const trackIndex = controls.track_index;
@@ -185,15 +190,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceError = (e) => {
 
+    const trackIndex = controls.track_index;
+    const sourceIndex = controls.source_index;
+    const track = playlist[trackIndex];
+    const source = track.sources[sourceIndex];
+
+    DEBUG && console.log("REACTPLAYLISTER / NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
+
+    setSourceNotPlayable(source);
+
     //inherit React Player prop
     if (typeof props.onError === 'function') {
       props.onError(e);
     }
 
-    const trackIndex = controls.track_index;
-    const sourceIndex = controls.source_index;
-
-    DEBUG && console.log("REACTPLAYLISTER / NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
 
     //skip automatically if the player is playing
     if (playRequest && skipError){
@@ -230,6 +240,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const skipTrack = (newBackwards) => {
+
+    setSkipping(true);
 
     //also set the backwards state if defined
     let doBackwards = backwards; //default value
@@ -270,6 +282,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP SOURCE");
 
+    setSkipping(true);
+
     const trackIndex = controls.track_index;
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
@@ -289,23 +303,46 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       })
     }
 
+  }
+
+  const getSourceTrack = (source) => {
+    return playlist.find(function(track) {
+      return ( track.sources.includes(source) );
+    });
+  }
+
+  const setSourceNotPlayable = (source) => {
+
+    const track = getSourceTrack(source);
+
+    console.log("SET SOURCE NOT PLAYABLE",source);
+
     //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
     //https://github.com/facebook/react/issues/16858#issuecomment-534257343
     setPlaylist(prevState => {
 
       const newState =
         prevState.map(
-          (track, i) => {
-            if (i === trackIndex){
-              const newSources = track.sources.map(
-                (source, i) => i === sourceIndex ? {...source,playable:false} : source
+          (playlistTrack) => {
+            if (playlistTrack === track){
+              const newSources = playlistTrack.sources.map(
+                (trackSource) => {
+                  if (trackSource === source){
+                    return {
+                      ...trackSource,
+                      playable:false
+                    }
+                  }else{
+                    return trackSource;
+                  }
+                }
               )
               return {
-                ...track,
+                ...playlistTrack,
                 sources:newSources
               };
             }else{
-              return track;
+              return playlistTrack;
             }
           }
         )
@@ -313,6 +350,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return newState;
     });
   }
+
+
 
   const previousSource = () => {
     setBackwards(true);//TOUFIX TOUCHECK
@@ -649,6 +688,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onControlsUpdated(controls);
     }
   }, [controls]);
+
+  //warn parent that we're skipping
+  useEffect(()=> {
+    if (typeof props.onSkipping === 'function') {
+      props.onSkipping(controls);
+    }
+  }, [skipping]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740

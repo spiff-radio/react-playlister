@@ -55,6 +55,10 @@ function App() {
     console.log("PLAYLIST ENDED");
   }
 
+  const handleSkipping = (bool) => {
+    console.log("IS SKIPPING ?",bool);
+  }
+
   const handlePlay = () =>{
     setPlayRequest(true);
     setPlaying(true);
@@ -215,7 +219,7 @@ function App() {
       /*
       ReactPlayer props
       */
-      
+
       playing={playRequest}
       controls={true}
       /*
@@ -237,12 +241,16 @@ function App() {
       config={}
       */
 
-      //Callback props
+      /*
+      Callback props
+      */
       onPlaylistUpdated={handlePlaylistUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistEnded={handlePlaylistEnded}
-
-      //ReactPlayer callback props
+      onSkipping={handleSkipping}
+      /*
+      ReactPlayer callback props
+      */
       onPlay={handlePlay}
       onPause={handlePause}
       /*
