@@ -99,16 +99,12 @@
     }
     .source{
       cursor: pointer;
-      &:not(.playable){
-        text-decoration: line-through;
-      }
-      &.active{
-        &:after{
-          content:" *";
-        }
-      }
       &.current{
         font-weight:bold;
+      }
+      .ui.label{
+        font-size:.8em;
+        padding:.2em .5em;
       }
     }
   }

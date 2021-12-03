@@ -57,7 +57,7 @@ function App() {
   }
 
   const handleSkipping = (bool) => {
-    console.log("IS SKIPPING ?",bool);
+    console.log((bool===true) ? '**START SKIP**' : '**STOP SKIP**');
   }
 
   const handlePlay = () =>{

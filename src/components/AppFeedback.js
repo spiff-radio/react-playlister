@@ -1,5 +1,6 @@
 import React from "react";
 import classNames from "classnames";
+import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
@@ -15,7 +16,16 @@ export const AppFeedback = props => {
       <span
       onClick={handleSourceSelect}
       >
-      {props.url}
+        <span>{props.url}</span>
+        {
+          props.selected &&
+          <Label>selected</Label>
+        }
+        {
+          !props.playable &&
+          <Label color="red">not playable</Label>
+        }
+
       </span>
     );
   }
@@ -42,8 +52,8 @@ export const AppFeedback = props => {
       <ul>
         {
           props.sources.map((source,sourceKey) => {
-            const isActive = (props.source_index === sourceKey);
-            const isCurrent = props.current && isActive;
+            const isSelected = (props.source_index === sourceKey);
+            const isCurrent = props.current && isSelected;
 
             return(
               <li
@@ -52,9 +62,7 @@ export const AppFeedback = props => {
               className={
                 classNames({
                   source:true,
-                  playable:source.playable,
-                  current:isCurrent,
-                  active:isActive
+                  current:isCurrent
                 })
               }
               >
@@ -62,6 +70,8 @@ export const AppFeedback = props => {
                 url={source.url}
                 track_index={props.track_index}
                 source_index={sourceKey}
+                selected={isSelected}
+                playable={source.playable}
                 onSelect={props.onSelect}
                 />
               </li>
