@@ -677,7 +677,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //warn parent that we're skipping
   useEffect(()=> {
     if (typeof props.onSkipping === 'function') {
-      props.onSkipping(controls);
+      props.onSkipping(skipping);
     }
   }, [skipping]);
 
