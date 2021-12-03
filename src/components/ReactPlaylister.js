@@ -271,7 +271,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
 
-    const newSourceIndex = getNextSourceIndex(track,sourceIndex);//try to find another playable source for this track
+    const newSourceIndex = getNextSourceIndex(track,sourceIndex,true);//try to find another playable source for this track
 
     if (newSourceIndex === undefined){
 
