@@ -22,10 +22,13 @@ export const AppFeedback = props => {
           <Label>selected</Label>
         }
         {
+          props.provider &&
+          <Label color="teal">{props.provider.name}</Label>
+        }
+        {
           !props.playable &&
           <Label color="red">not playable</Label>
         }
-
       </span>
     );
   }
@@ -70,6 +73,7 @@ export const AppFeedback = props => {
                 url={source.url}
                 track_index={props.track_index}
                 source_index={sourceKey}
+                provider={source.provider}
                 selected={isSelected}
                 playable={source.playable}
                 onSelect={props.onSelect}

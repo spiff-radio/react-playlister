@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
+import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 import classNames from "classnames";
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
@@ -130,7 +131,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const filterSource = (source) => {
     if (ignoreUnplayable){
-      return source.playable;
+      return isPlayableSource(source);
     }
     return true;
   }
@@ -372,11 +373,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //build our initial data
   useEffect(() => {
 
-    const getDomain = (url) => {
-      let output = new URL(url).hostname;
-      return output.split(".").slice(-2).join("."); //no www's
-    }
-
     const makeTrack = (urls,track_index) => {
 
       urls = [].concat(urls || []);//force array (it might be a single URL string)
@@ -384,10 +380,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       const sources = urls.map(function(url) {
 
+        const isSourceProvider = (provider) => {
+          return provider.canPlay(url);
+        }
+
+        const provider = reactplayerProviders.find(isSourceProvider);
+
+        console.log(provider);
+
         return {
           url:url,
           playable:ReactPlayer.canPlay(url),
-          domain:getDomain(url)
+          provider:provider ? {name:provider.name,key:provider.key} : undefined
         }
       });
 
