@@ -13,8 +13,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
 
-  //when a URL does not play, skip to next one ?
-  const autoskip = props.autoskip ?? true;
+  const ignoreUnplayable = props.autoskip ?? true;
 
   //should we skip if an error is fired ?
   const skipError = props.skipError ?? true;
@@ -88,16 +87,24 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
   }
 
-  const isPlayableTrack = (track) => {
-    let bool = track.playable;
+  const filterTrack = (track) => {
 
-    //here's a chance to filter the playable tracks if you have a very specific need for it.
-    if (typeof props.filterPlayableTrack === 'function') {
-      const trackIndex = playlist.indexOf(track);
-      bool = props.filterPlayableTrack(track,trackIndex,bool);
+    const isPlayableTrack = (track) => {
+      let bool = track.playable;
+
+      //here's a chance to filter the playable tracks if you have a very specific need for it.
+      if (typeof props.filterPlayableTrack === 'function') {
+        const trackIndex = playlist.indexOf(track);
+        bool = props.filterPlayableTrack(track,trackIndex,bool);
+      }
+
+      return bool;
     }
 
-    return bool;
+    if (ignoreUnplayable){
+      return isPlayableTrack(track);
+    }
+    return true;
   }
 
   const isPlayableSource = (source) => {
@@ -107,9 +114,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const getTracksQueue = (playlist,index,loop,backwards) => {
     let queue = getArrayQueue(playlist,index,loop,backwards);
 
-    if (autoskip){
+    if (ignoreUnplayable){
       //filter only playable tracks
-      queue = queue.filter(isPlayableTrack);
+      queue = queue.filter(filterTrack);
     }
 
     return queue;
@@ -121,18 +128,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queueKeys[0];
   }
 
-  const getSourcesQueue = (track,index,loop,backwards) => {
-    let queue = getArrayQueue(track?.sources,index,loop,backwards);
-
-    if (autoskip){
-      //filter only playable sources
-      queue = queue.filter(function (source) {
-        return source.playable;
-      });
+  const filterSource = (source) => {
+    if (ignoreUnplayable){
+      return source.playable;
     }
+    return true;
+  }
 
-    return queue;
-
+  const getSourcesQueue = (track,index,loop,backwards) => {
+    const queue = getArrayQueue(track?.sources,index,loop,backwards);
+    return queue.filter(filterSource);
   }
 
   const getNextSourceIndex = (track,index,loop,backwards) => {
@@ -492,17 +497,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if ( sourceIndex === undefined ){
       const track = playlist[trackIndex];
 
-      //use the previously selected source (if any)...
-      sourceIndex = (track.current_source !== undefined) ? track.current_source : undefined;
-      //...except if auto skip is enabled and that the source is not playable
-      const source = track.sources[sourceIndex];
-      sourceIndex = ( (source !== undefined) && autoskip && !source.playable ) ? undefined : sourceIndex;
+      //use current source if any
+      if (track.current_source){
+        const source = track.sources[track.current_source];
+        //be sure it can be loaded
+        if ( source && filterSource(source) ){
+          sourceIndex = track.current_source;
+        }
+      }
 
       if (sourceIndex !== undefined){
-        DEBUG && console.log("REACTPLAYLISTER / AUTO SELECT SOURCE FOR TRACK #"+trackIndex,sourceIndex);
+        DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+trackIndex,sourceIndex);
       }else{
         sourceIndex = getNextSourceIndex(track,sourceIndex);
-        if (sourceIndex === undefined) return;
         DEBUG && console.log("REACTPLAYLISTER / SET SOURCE INDEX FOR TRACK #"+trackIndex,sourceIndex);
       }
 
