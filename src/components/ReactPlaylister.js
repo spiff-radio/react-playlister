@@ -42,10 +42,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     previous_sources:[]
   });
 
-  //when a source is loaded,
-  //will a us temporary pause the player so we don't have a sound bug when switching sources.
-  const [sourceToggle, setSourceToggle] = useState(false);
-
   const [source, setSource] = useState();
   const [url, setUrl] = useState();//current url
 
@@ -633,12 +629,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }, [controls]);
 
   //set player URL.
-  //We set it ONLY if the source is defined;
-  //because if we pass an undefined value; a player that is in a background tab will freeze between two tracks.
-  //https://github.com/cookpete/react-player/issues/1177#issuecomment-781929517
-  //https://bugs.chromium.org/p/chromium/issues/detail?id=1244074
   useEffect(() => {
-    setSourceToggle(true);
     DEBUG && console.log("REACTPLAYLISTER / SET SOURCE",source);
     if (source){
       if (url !== source.url){
@@ -651,14 +642,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           reactPlayerRef.current.seekTo(0);
         }
       }
+    }else{
+      setUrl();
     }
-  }, [source]);
 
-  useEffect(() => {
-    if (url){
-      setSourceToggle(false);
-    }
-  }, [url]);
+  }, [source]);
 
   //warn parent that data has been updated
   useEffect(() => {
@@ -710,8 +698,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   return (
     <div
     className={classNames({
-      'react-playlister':  true,
-      'no-source':       sourceToggle
+      'react-playlister':  true
     })}
     >
       <ReactPlayer
@@ -722,7 +709,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={sourceToggle ? false : playRequest}
+      playing={playRequest}
       controls={props.controls}
       light={props.light}
       volume={props.volume}
