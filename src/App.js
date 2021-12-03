@@ -1,5 +1,6 @@
 import logo from './logo.svg';
 import './App.scss';
+import 'semantic-ui-css/semantic.min.css';
 import React, { useState, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 import { AppFeedback } from "./components/AppFeedback";
