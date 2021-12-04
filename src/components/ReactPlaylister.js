@@ -180,8 +180,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = playlist[trackIndex];
     const source = track.sources[sourceIndex];
 
-    DEBUG && console.log("REACTPLAYLISTER / NOT PLAYABLE: TRACK #"+trackIndex+" SOURCE #"+sourceIndex+" WITH URL:"+url);
-
     setSourceNotPlayable(source);
 
     //inherit React Player prop
@@ -301,7 +299,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const setSourceNotPlayable = (source) => {
 
     const track = getSourceTrack(source);
-
     console.log("SET SOURCE NOT PLAYABLE",source);
 
     //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
@@ -378,7 +375,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       urls = [].concat(urls || []);//force array (it might be a single URL string)
       urls = urls.flat(Infinity);//flatten
 
-      const sources = urls.map(function(url) {
+      const sources = urls.map(function(url,i) {
 
         const isSourceProvider = (provider) => {
           return provider.canPlay(url);
@@ -390,6 +387,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
         return {
           url:url,
+          index:i,
           playable:ReactPlayer.canPlay(url),
           provider:provider ? {name:provider.name,key:provider.key} : undefined
         }
@@ -707,11 +705,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div
-    className={classNames({
-      'react-playlister':  true
-    })}
-    >
+    <div className='react-playlister'>
       <ReactPlayer
 
       //props handled by ReactPlaylister

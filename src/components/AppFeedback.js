@@ -16,6 +16,10 @@ export const AppFeedback = props => {
       <span
       onClick={handleSourceSelect}
       >
+        <Label>
+        #{props.index} 
+        </Label>
+
         <span>{props.url}</span>
         {
           props.selected &&
@@ -71,6 +75,7 @@ export const AppFeedback = props => {
               >
                 <SourceFeedback
                 url={source.url}
+                index={source.index}
                 track_index={props.track_index}
                 source_index={sourceKey}
                 provider={source.provider}
