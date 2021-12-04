@@ -14,6 +14,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
 
+  const sortProviders = props.sortProviders || [];
+  const disabledProviders = props.disabledProviders || [];
+
   const ignoreUnplayable = props.autoskip ?? true;
 
   //should we skip if an error is fired ?
@@ -105,6 +108,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (ignoreUnplayable){
       return isPlayableTrack(track);
     }
+
     return true;
   }
 
@@ -383,12 +387,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
         const provider = reactplayerProviders.find(isSourceProvider);
 
-        console.log(provider);
-
         return {
           url:url,
           index:i,
           playable:ReactPlayer.canPlay(url),
+          autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
           provider:provider ? {name:provider.name,key:provider.key} : undefined
         }
       });

@@ -216,6 +216,7 @@ function App() {
       index={index}
       loop={loop}
       autoskip={autoskip}
+      disabledProviders={['soundcloud']}
 
       /*
       ReactPlayer props

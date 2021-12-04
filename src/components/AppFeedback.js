@@ -17,7 +17,7 @@ export const AppFeedback = props => {
       onClick={handleSourceSelect}
       >
         <Label>
-        #{props.index} 
+        #{props.index}
         </Label>
 
         <span>{props.url}</span>
@@ -28,6 +28,10 @@ export const AppFeedback = props => {
         {
           props.provider &&
           <Label color="teal">{props.provider.name}</Label>
+        }
+        {
+          props.autoplay &&
+          <Label>autoplay</Label>
         }
         {
           !props.playable &&
@@ -76,6 +80,7 @@ export const AppFeedback = props => {
                 <SourceFeedback
                 url={source.url}
                 index={source.index}
+                autoplay={source.autoplay}
                 track_index={props.track_index}
                 source_index={sourceKey}
                 provider={source.provider}
