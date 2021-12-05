@@ -151,9 +151,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const filterSource = (source) => {
-    if (ignoreUnplayable){
-      return isPlayableSource(source);
+
+    const playable = isPlayableSource(source);
+    const autoplay = source.autoplay;
+
+    if (ignoreUnplayable && !playable){
+      return false;
     }
+
+    if (skipping && !autoplay){
+      return false;
+    }
+
     return true;
   }
 
