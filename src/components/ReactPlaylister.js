@@ -140,7 +140,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       //filter only playable tracks
       queue = queue.filter(filterTrack);
     }
-
     return queue;
   }
 
@@ -166,10 +165,24 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return true;
   }
 
+  const sortSourcesByProvider = (a,b) => {
+    const sortKeys = sortProviders;
+
+    if (!sortKeys.length) return 0;
+
+    let aProviderKey = sortKeys.indexOf(a.provider?.key);
+    aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortKeys.length; //if key not found, consider at the end
+
+    let bProviderKey = sortKeys.indexOf(b.provider?.key);
+    bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortKeys.length; //if key not found, consider at the end
+
+    return aProviderKey - bProviderKey;
+
+  }
+
   const getSourcesQueue = (track,index,loop,backwards) => {
     let queue = getArrayQueue(track?.sources,index,loop,backwards);
-    queue = queue.filter(filterSource);
-    return queue;
+    return queue.filter(filterSource);
   }
 
   const getNextSourceIndex = (track,index,loop,backwards) => {
@@ -406,7 +419,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       urls = [].concat(urls || []);//force array (it might be a single URL string)
       urls = urls.flat(Infinity);//flatten
 
-      const sources = urls.map(function(url,i) {
+      let sources = urls.map(function(url,i) {
 
         const isSourceProvider = (provider) => {
           return provider.canPlay(url);
@@ -422,6 +435,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           provider:provider ? {name:provider.name,key:provider.key} : undefined
         }
       });
+
+      if (sortProviders){
+        sources = sources.sort(sortSourcesByProvider);
+      }
 
       let track = {
         sources:sources
