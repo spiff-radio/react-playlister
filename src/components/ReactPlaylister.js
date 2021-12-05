@@ -4,6 +4,8 @@ import { default as reactplayerProviders } from 'react-player/lib/players/index.
 import classNames from "classnames";
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
+const REACTPLAYER_PROVIDERS = reactplayerProviders;
+const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 
 export const ReactPlaylister = forwardRef((props, ref) => {
 
@@ -14,8 +16,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
 
-  const sortProviders = props.sortProviders || [];
-  const disabledProviders = props.disabledProviders || [];
+  const getProvidersOrder = (keys) => {
+    keys = keys || [];
+    const frontKeys = keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to put in front (remove the ones that does not exists in the original array)
+    const backKeys = REACTPLAYER_PROVIDER_KEYS.filter(x => !frontKeys.includes(x));
+    return frontKeys.concat(backKeys);
+  }
+
+  const getDisabledProviders = (keys) => {
+    keys = keys || [];
+    return keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to disable (remove the ones that does not exists in the original array)
+  }
+
+  const sortProviders = getProvidersOrder(props.sortProviders);
+  const disabledProviders = getDisabledProviders(props.disabledProviders);
+
+  console.log("SORT PROVIDERS",sortProviders);
+  console.log("DISABLED PROVIDERS",disabledProviders);
 
   const ignoreUnplayable = props.autoskip ?? true;
 
@@ -141,8 +158,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const getSourcesQueue = (track,index,loop,backwards) => {
-    const queue = getArrayQueue(track?.sources,index,loop,backwards);
-    return queue.filter(filterSource);
+    let queue = getArrayQueue(track?.sources,index,loop,backwards);
+    queue = queue.filter(filterSource);
+    return queue;
   }
 
   const getNextSourceIndex = (track,index,loop,backwards) => {
