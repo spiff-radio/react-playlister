@@ -17,7 +17,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const shuffle = props.shuffle ?? false;
 
   const getProvidersOrder = (keys) => {
-    keys = keys || [];
+    keys = keys || ['file'];
     const frontKeys = keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to put in front (remove the ones that does not exists in the original array)
     const backKeys = REACTPLAYER_PROVIDER_KEYS.filter(x => !frontKeys.includes(x));
     return frontKeys.concat(backKeys);
@@ -163,21 +163,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     return true;
-  }
-
-  const sortSourcesByProvider = (a,b) => {
-    const sortKeys = sortProviders;
-
-    if (!sortKeys.length) return 0;
-
-    let aProviderKey = sortKeys.indexOf(a.provider?.key);
-    aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortKeys.length; //if key not found, consider at the end
-
-    let bProviderKey = sortKeys.indexOf(b.provider?.key);
-    bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortKeys.length; //if key not found, consider at the end
-
-    return aProviderKey - bProviderKey;
-
   }
 
   const getSourcesQueue = (track,index,loop,backwards) => {
@@ -414,6 +399,29 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //build our initial data
   useEffect(() => {
 
+    const sortSourcesByProvider = (a,b) => {
+      const sortKeys = sortProviders;
+
+      if (!sortKeys.length) return 0;
+
+      let aProviderKey = sortKeys.indexOf(a.provider?.key);
+      aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortKeys.length; //if key not found, consider at the end
+
+      let bProviderKey = sortKeys.indexOf(b.provider?.key);
+      bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortKeys.length; //if key not found, consider at the end
+
+      return aProviderKey - bProviderKey;
+
+    }
+
+    const sortSourcesByAutoplay = (a,b) =>{
+      return (b.autoplay - a.autoplay);
+    }
+
+    const sortSourcesByPlayable = (a,b) =>{
+      return (b.playable - a.playable);
+    }
+
     const makeTrack = (urls,track_index) => {
 
       urls = [].concat(urls || []);//force array (it might be a single URL string)
@@ -436,9 +444,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       });
 
+      //sort sources
       if (sortProviders){
         sources = sources.sort(sortSourcesByProvider);
       }
+      sources = sources.sort(sortSourcesByAutoplay);
+      sources = sources.sort(sortSourcesByPlayable);
 
       let track = {
         sources:sources

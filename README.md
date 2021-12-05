@@ -13,6 +13,11 @@ Prop | Description | Default
 `loop` | Set to `true` or `false` to loop the playlist. | `false`
 `autoskip` | Ignore unplayable items when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it. | `true`
 `shuffle` | Set to `true` or `false` to enable shuffle mode. **(not yet implemented)** | `false`
+`disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](//https://github.com/cookpete/react-player/blob/master/src/players/index.js
+). | `[]`
+`sortProviders` | Sort the URLs based on an array of [providers keys](//https://github.com/cookpete/react-player/blob/master/src/players/index.js
+). | `['file']`
+
 
 You can also set [the props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#props).
 
