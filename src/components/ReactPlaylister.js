@@ -31,9 +31,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const sortProviders = getProvidersOrder(props.sortProviders);
   const disabledProviders = getDisabledProviders(props.disabledProviders);
 
-  console.log("SORT PROVIDERS",sortProviders);
-  console.log("DISABLED PROVIDERS",disabledProviders);
-
   const ignoreUnplayable = props.autoskip ?? true;
 
   //should we skip if an error is fired ?
@@ -50,7 +47,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //do we iterate URLs backwards ?
   const [backwards,setBackwards] = useState(false);
-
 
   const [playlist,setPlaylist] = useState([]);//our (transformed) datas
   const [controls,setControls] = useState({
@@ -177,7 +173,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queueKeys[0];
 
   }
-
 
   const hasPlayableSources = track => {
     return (track.sources.filter(isPlayableSource).length > 0);
@@ -363,8 +358,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return newState;
     });
   }
-
-
 
   const previousSource = () => {
     setBackwards(true);//TOUFIX TOUCHECK

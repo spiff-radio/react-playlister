@@ -33,8 +33,8 @@ function App() {
   ]);
 
   const [index,setIndex] = useState([3,1]);
-  const [playerPlaylist, setPlayerPlaylist] = useState([]);
-  const [playerControls, setPlayerControls] = useState({});
+  const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
+  const [playlisterControls, setPlaylisterControls] = useState({});
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
@@ -44,12 +44,12 @@ function App() {
 
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
-    setPlayerPlaylist(playlist);
+    setPlaylisterPlaylist(playlist);
   }
 
   const handleControlsUpdated = (controls) => {
     console.log("APP / CONTROLS UPDATED",controls);
-    setPlayerControls(controls);
+    setPlaylisterControls(controls);
   }
 
   const handlePlaylistEnded = () => {
@@ -88,13 +88,13 @@ function App() {
     setUrls(arr);
   }
 
-  const trackIndex = playerControls.track_index;
-  const hasPreviousTracks = playerControls?.previous_tracks?.length;
-  const hasNextTracks = playerControls?.next_tracks?.length;
+  const trackIndex = playlisterControls.track_index;
+  const hasPreviousTracks = playlisterControls?.previous_tracks?.length;
+  const hasNextTracks = playlisterControls?.next_tracks?.length;
 
-  const sourceIndex = playerControls.source_index;
-  const hasPreviousSources = playerControls?.previous_sources?.length;
-  const hasNextSources = playerControls?.next_sources?.length;
+  const sourceIndex = playlisterControls.source_index;
+  const hasPreviousSources = playlisterControls?.previous_sources?.length;
+  const hasNextSources = playlisterControls?.next_sources?.length;
 
   console.log("APP RELOAD");
 
@@ -125,14 +125,14 @@ function App() {
         <div id="output">
           <h3>Feedback</h3>
           <AppFeedback
-          playlist={playerPlaylist}
-          controls={playerControls}
+          playlist={playlisterPlaylist}
+          controls={playlisterControls}
           onSelect={handleSourceSelect}
           />
         </div>
       </div>
       {
-        playerPlaylist &&
+        playlisterPlaylist &&
           <div id="controls">
 
             <p>

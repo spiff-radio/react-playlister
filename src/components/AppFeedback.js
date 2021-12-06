@@ -4,6 +4,8 @@ import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
+  const playlist = props.playlist || [];
+
   const SourceFeedback = props => {
 
     const handleSourceSelect = (e) => {
@@ -104,7 +106,7 @@ content
   return(
     <ul>
     {
-      props.playlist.map((track,trackKey) => {
+      playlist.map((track,trackKey) => {
         const isCurrent = (props.controls.track_index === trackKey);
         const source_index = track.current_source;
         return (
