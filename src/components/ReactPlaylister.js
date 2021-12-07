@@ -171,7 +171,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const queue = getSourcesQueue(track,index,loop,backwards);
     const queueKeys = getArrayQueueKeys(track?.sources,queue);
     return queueKeys[0];
-
   }
 
   const hasPlayableSources = track => {
@@ -437,14 +436,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       });
 
       //sort sources
-      if (sortProviders){
-
-      }
       sources = sources.sort(sortSourcesByPlayable);
       sources = sources.sort(sortSourcesByAutoplay);
-      sources = sources.sort(sortSourcesByProvider);
-
-
+      if (sortProviders){
+        sources = sources.sort(sortSourcesByProvider);
+      }
 
       let track = {
         sources:sources
@@ -512,7 +508,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //set default indices when component initializes
   useEffect(() => {
 
-    if ( !playlist ) return;
     if (props.index === undefined) return;
 
     const indexes = Array.isArray(props.index) ? props.index : [props.index];//force array
@@ -532,7 +527,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     })
 
-  }, [playlist,props.index]);
+  }, [props.index]);
 
   //if track/source index is not defined
   useEffect(() => {
@@ -578,7 +573,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     })
 
-  }, [playlist,controls.track_index,controls.source_index]);
+  }, [playlist]);
 
   //update previous/next controls
   useEffect(() => {
