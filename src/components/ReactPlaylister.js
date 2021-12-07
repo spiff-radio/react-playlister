@@ -15,6 +15,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
+  const autoskip = props.autoskip ?? true;
 
   const getProvidersOrder = (keys) => {
     keys = keys || ['file'];
@@ -31,7 +32,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const sortProviders = getProvidersOrder(props.sortProviders);
   const disabledProviders = getDisabledProviders(props.disabledProviders);
 
-  const ignoreUnplayable = props.autoskip ?? true;
+
 
   //should we skip if an error is fired ?
   const skipError = props.skipError ?? true;
@@ -118,7 +119,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return bool;
     }
 
-    if (ignoreUnplayable){
+    if (autoskip){
       return isPlayableTrack(track);
     }
 
@@ -132,7 +133,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const getTracksQueue = (playlist,index,loop,backwards) => {
     let queue = getArrayQueue(playlist,index,loop,backwards);
 
-    if (ignoreUnplayable){
+    if (autoskip){
       //filter only playable tracks
       queue = queue.filter(filterTrack);
     }
@@ -147,15 +148,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const filterSource = (source) => {
 
-    const playable = isPlayableSource(source);
-    const autoplay = source.autoplay;
+    if (autoskip){
+      const playable = isPlayableSource(source);
+      const autoplay = source.autoplay;
 
-    if (ignoreUnplayable && !playable){
-      return false;
-    }
+      if (!playable){
+        return false;
+      }
 
-    if (skipping && !autoplay){
-      return false;
+      if (skipping && !autoplay){
+        return false;
+      }
     }
 
     return true;
@@ -258,7 +261,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       backwardsMsg = doBackwards ? ' TO PREVIOUS' : ' TO NEXT';
     }
 
-    const newIndex = getNextTrackIndex(playlist,controls.track_index,props.loop,doBackwards);
+    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,doBackwards);
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
 
@@ -298,7 +301,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (newSourceIndex === undefined){
 
-      const newTrackIndex = getNextTrackIndex(playlist,trackIndex,props.loop,backwards);
+      const newTrackIndex = getNextTrackIndex(playlist,trackIndex,loop,backwards);
 
       DEBUG && console.log("REACTPLAYLISTER / FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
 
@@ -361,7 +364,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const previousSource = () => {
     setBackwards(true);//TOUFIX TOUCHECK
     const track = playlist[controls.track_index];
-    const newIndex = getNextSourceIndex(track,controls.source_index,props.loop,true);
+    const newIndex = getNextSourceIndex(track,controls.source_index,loop,true);
 
     if (newIndex !== undefined){
       setControls(prevState => {
@@ -376,7 +379,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const nextSource = () => {
     setBackwards(false);//TOUFIX TOUCHECK
     const track = playlist[controls.track_index];
-    const newIndex = getNextSourceIndex(track,controls.source_index,props.loop,false);
+    const newIndex = getNextSourceIndex(track,controls.source_index,loop,false);
 
     if (newIndex !== undefined){
       setControls(prevState => {
@@ -592,8 +595,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    const previousTracksQueue = getTracksQueue(playlist,trackIndex,props.loop,true);
-    const nextTracksQueue = getTracksQueue(playlist,trackIndex,props.loop,false);
+    const previousTracksQueue = getTracksQueue(playlist,trackIndex,loop,true);
+    const nextTracksQueue = getTracksQueue(playlist,trackIndex,loop,false);
     const previousTracksQueueKeys = getArrayQueueKeys(playlist,previousTracksQueue);
     const nextTracksQueueKeys = getArrayQueueKeys(playlist,nextTracksQueue);
 
@@ -623,7 +626,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
 
-  }, [controls.track_index,controls.source_index,props.loop]);
+  }, [controls.track_index,controls.source_index,loop,autoskip]);
 
   //set current_source property of the track object.
   //It will be used as fallback if no source is specified when selecting a track.
