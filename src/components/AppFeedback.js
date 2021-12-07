@@ -25,7 +25,7 @@ export const AppFeedback = props => {
         <span>{props.url}</span>
         {
           props.selected &&
-          <Label>selected</Label>
+          <Label color="black">selected</Label>
         }
         {
           props.provider &&

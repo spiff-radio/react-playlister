@@ -48,7 +48,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //do we iterate URLs backwards ?
   const [backwards,setBackwards] = useState(false);
 
-  const [playlist,setPlaylist] = useState([]);//our (transformed) datas
+  const [playlist,setPlaylist] = useState();//our (transformed) datas
   const [controls,setControls] = useState({
     track_index:undefined,
     source_index:undefined,
@@ -471,7 +471,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //try to restore previous values of current_source
     /*TOUFIX TO IMPROVE ? URGENT
-    if (playlist.length){//we have an old playlist record
+    if (playlist){//we have an old playlist record
 
 
       //current_source
@@ -512,7 +512,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //set default indices when component initializes
   useEffect(() => {
 
-    if ( !playlist.length) return;
+    if ( !playlist ) return;
     if (props.index === undefined) return;
 
     const indexes = Array.isArray(props.index) ? props.index : [props.index];//force array
@@ -536,7 +536,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //if track/source index is not defined
   useEffect(() => {
-    if ( !playlist.length) return;
+    if ( !playlist ) return;
 
     let trackIndex = controls.track_index;
     let sourceIndex = controls.source_index;
@@ -582,6 +582,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update previous/next controls
   useEffect(() => {
+
+    if (!playlist) return;
 
     const trackIndex = controls.track_index;
     const track = playlist[trackIndex];
