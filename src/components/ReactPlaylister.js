@@ -150,7 +150,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return false;
       }
 
-      if (skipping && !source.autoplay){
+      if (!source.autoplay){
         return false;
       }
     }
