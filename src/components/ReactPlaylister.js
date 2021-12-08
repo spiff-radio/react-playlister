@@ -44,7 +44,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const skipNoSources = props.skipNoSources ?? true;
 
   //are we currently skipping ?
-  const [skipping,setSkipping] = useState(false);
+  const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
   //do we iterate URLs backwards ?
   const [backwards,setBackwards] = useState(false);
@@ -126,10 +126,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return true;
   }
 
-  const isPlayableSource = (source) => {
-    return source.playable;
-  }
-
   const getTracksQueue = (playlist,index,loop,backwards) => {
     let queue = getArrayQueue(playlist,index,loop,backwards);
 
@@ -149,14 +145,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const filterSource = (source) => {
 
     if (autoskip){
-      const playable = isPlayableSource(source);
-      const autoplay = source.autoplay;
 
-      if (!playable){
+      if (!source.playable){
         return false;
       }
 
-      if (skipping && !autoplay){
+      if (skipping && !source.autoplay){
         return false;
       }
     }
@@ -174,10 +168,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const queue = getSourcesQueue(track,index,loop,backwards);
     const queueKeys = getArrayQueueKeys(track?.sources,queue);
     return queueKeys[0];
-  }
-
-  const hasPlayableSources = track => {
-    return (track.sources.filter(isPlayableSource).length > 0);
   }
 
   const handleSourceReady = (player) => {
@@ -252,16 +242,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setSkipping(true);
 
-    //also set the backwards state if defined
-    let doBackwards = backwards; //default value
-    let backwardsMsg = '';
-    if (newBackwards !== undefined){
-      setBackwards(newBackwards);
-      doBackwards = newBackwards;
-      backwardsMsg = doBackwards ? ' TO PREVIOUS' : ' TO NEXT';
-    }
+    //Set the backwards state
+    newBackwards = (newBackwards !== undefined) ? newBackwards : backwards;
+    const backwardsMsg = newBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+    setBackwards(newBackwards);
 
-    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,doBackwards);
+    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,newBackwards);
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
 
@@ -287,9 +273,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipTrack(false);
   }
 
-  const skipSource = () => {
-
-    DEBUG && console.log("REACTPLAYLISTER / SKIP SOURCE");
+  const skipSource = (newBackwards) => {
 
     setSkipping(true);
 
@@ -297,23 +281,36 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
 
-    const newSourceIndex = getNextSourceIndex(track,sourceIndex,true);//try to find another playable source for this track
+    //Set the backwards state
+    newBackwards = (newBackwards !== undefined) ? newBackwards : backwards;
+    const backwardsMsg = newBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+    setBackwards(newBackwards);
 
-    if (newSourceIndex === undefined){
+    const newIndex = getNextSourceIndex(track,sourceIndex,true,newBackwards);//try to find another playable source for this track
 
-      const newTrackIndex = getNextTrackIndex(playlist,trackIndex,loop,backwards);
-
-      DEBUG && console.log("REACTPLAYLISTER / FROM TRACK #"+trackIndex+"; SKIP TO TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
-
-      setControls(prevState => {
-        return{
-          ...prevState,
-          track_index:newTrackIndex,
-          source_index:newSourceIndex
-        }
-      })
+    //no source found, skip track
+    if (newIndex === undefined){
+      skipTrack(newBackwards);
+      return;
     }
 
+    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM SOURCE #"+controls.track_index+" -> SOURCE #"+newIndex);
+
+    setControls(prevState => {
+      return{
+        ...prevState,
+        source_index:newIndex
+      }
+    })
+
+  }
+
+  const previousSource = () => {
+    skipSource(true);
+  }
+
+  const nextSource = () => {
+    skipSource(false);
   }
 
   const getSourceTrack = (source) => {
@@ -361,38 +358,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     });
   }
 
-  const previousSource = () => {
-    setBackwards(true);//TOUFIX TOUCHECK
-    const track = playlist[controls.track_index];
-    const newIndex = getNextSourceIndex(track,controls.source_index,loop,true);
-
-    if (newIndex !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          source_index:newIndex
-        }
-      })
-    }
-  }
-
-  const nextSource = () => {
-    setBackwards(false);//TOUFIX TOUCHECK
-    const track = playlist[controls.track_index];
-    const newIndex = getNextSourceIndex(track,controls.source_index,loop,false);
-
-    if (newIndex !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          source_index:newIndex
-        }
-      })
-    }
-  }
-
   //build our initial data
   useEffect(() => {
+
+    //returns true if the track has at least one playable source
+    const hasPlayableSources = track => {
+      return track.sources.find(source => source.playable);
+    }
 
     const sortSourcesByProvider = (a,b) => {
 
@@ -510,7 +482,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [props.urls]);
 
-  //set default indices when component initializes
+  //set default indices from props (if any)
   useEffect(() => {
 
     if (props.index === undefined) return;
