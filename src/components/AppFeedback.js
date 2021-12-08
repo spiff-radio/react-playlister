@@ -24,20 +24,20 @@ export const AppFeedback = props => {
 
         <span>{props.url}</span>
         {
-          props.selected &&
-          <Label color="black">selected</Label>
-        }
-        {
           props.provider &&
           <Label color="teal">{props.provider.name}</Label>
         }
         {
-          props.autoplay &&
-          <Label>autoplay</Label>
+          !props.autoplay &&
+          <Label color="orange">no autoplay</Label>
         }
         {
           !props.playable &&
           <Label color="red">not playable</Label>
+        }
+        {
+          props.selected &&
+          <Label color="black">selected</Label>
         }
       </span>
     );
