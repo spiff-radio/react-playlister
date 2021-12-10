@@ -46,9 +46,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //are we currently skipping ?
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
-  //do we iterate URLs backwards ?
-  const [backwards,setBackwards] = useState(false);
-
   const [playlist,setPlaylist] = useState();//our (transformed) datas
   const [controls,setControls] = useState({
     track_index:undefined,
@@ -172,7 +169,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceReady = (player) => {
     setSkipping(false);//if we were skipping
-    setBackwards(false);//if we were skipping backwards, resets it.
 
     const trackIndex = controls.track_index;
     const sourceIndex = controls.source_index;
@@ -238,16 +234,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
   }
 
-  const skipTrack = (newBackwards) => {
+  const skipTrack = (backwards) => {
 
     setSkipping(true);
 
-    //Set the backwards state
-    newBackwards = (newBackwards !== undefined) ? newBackwards : backwards;
-    const backwardsMsg = newBackwards ? ' TO PREVIOUS' : ' TO NEXT';
-    setBackwards(newBackwards);
+    //backwards?
+    backwards = (backwards !== undefined) ? backwards : false;
+    const backwardsMsg = backwards ? ' TO PREVIOUS' : ' TO NEXT';
 
-    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,newBackwards);
+    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,backwards);
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
 
@@ -273,7 +268,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipTrack(false);
   }
 
-  const skipSource = (newBackwards) => {
+  const skipSource = (backwards) => {
 
     setSkipping(true);
 
@@ -281,16 +276,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
 
-    //Set the backwards state
-    newBackwards = (newBackwards !== undefined) ? newBackwards : backwards;
-    const backwardsMsg = newBackwards ? ' TO PREVIOUS' : ' TO NEXT';
-    setBackwards(newBackwards);
+    //backwards?
+    backwards = (backwards !== undefined) ? backwards : false;
+    const backwardsMsg = backwards ? ' TO PREVIOUS' : ' TO NEXT';
 
-    const newIndex = getNextSourceIndex(track,sourceIndex,true,newBackwards);//try to find another playable source for this track
+    const newIndex = getNextSourceIndex(track,sourceIndex,true,backwards);//try to find another playable source for this track
 
     //no source found, skip track
     if (newIndex === undefined){
-      skipTrack(newBackwards);
+      skipTrack(backwards);
       return;
     }
 
