@@ -629,7 +629,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     });
 
 
-  }, [controls.source_index]);
+  }, [controls.track_index,controls.source_index]);
 
   //select source
   useEffect(() => {
