@@ -43,6 +43,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //should we skip if track has no sources ?
   const skipNoSources = props.skipNoSources ?? true;
 
+  //do we iterate URLs backwards ?
+  const [backwards,setBackwards] = useState(false);
+
   //are we currently skipping ?
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
@@ -168,6 +171,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const handleSourceReady = (player) => {
+
+    setBackwards(false);
     setSkipping(false);//if we were skipping
 
     const trackIndex = controls.track_index;
@@ -234,15 +239,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
   }
 
-  const skipTrack = (backwards) => {
+  const skipTrack = (goBackwards) => {
 
     setSkipping(true);
 
-    //backwards?
-    backwards = (backwards !== undefined) ? backwards : false;
-    const backwardsMsg = backwards ? ' TO PREVIOUS' : ' TO NEXT';
+    //update the backwards state if it changes
+    goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
+    setBackwards(goBackwards);
 
-    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,backwards);
+    const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+
+    const newIndex = getNextTrackIndex(playlist,controls.track_index,loop,goBackwards);
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+controls.track_index+" -> TRACK #"+newIndex);
 
@@ -268,7 +275,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipTrack(false);
   }
 
-  const skipSource = (backwards) => {
+  const skipSource = (goBackwards) => {
 
     setSkipping(true);
 
@@ -276,15 +283,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = controls.source_index;
     const track = playlist[trackIndex];
 
-    //backwards?
-    backwards = (backwards !== undefined) ? backwards : false;
-    const backwardsMsg = backwards ? ' TO PREVIOUS' : ' TO NEXT';
+    //update the backwards state if it changes
+    goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
+    setBackwards(goBackwards);
 
-    const newIndex = getNextSourceIndex(track,sourceIndex,true,backwards);//try to find another playable source for this track
+    const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+
+    const newIndex = getNextSourceIndex(track,sourceIndex,true,goBackwards);//try to find another playable source for this track
 
     //no source found, skip track
     if (newIndex === undefined){
-      skipTrack(backwards);
+      skipTrack(goBackwards);
       return;
     }
 
