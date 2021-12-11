@@ -53,10 +53,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [controls,setControls] = useState({
     track_index:undefined,
     source_index:undefined,
-    next_tracks:[],
-    previous_tracks:[],
-    next_sources:[],
-    previous_sources:[]
+    has_previous_track:false,
+    has_next_track:false,
+    has_previous_source:false,
+    has_next_source:false
   });
 
   const [source, setSource] = useState();
@@ -577,8 +577,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     appendControls = {
       ...appendControls,
-      previous_tracks:  previousTracksQueueKeys,
-      next_tracks:      nextTracksQueueKeys
+      has_previous_track:  previousTracksQueueKeys?.length,
+      has_next_track:      nextTracksQueueKeys?.length
     }
 
     //SOURCE
@@ -589,8 +589,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     appendControls = {
       ...appendControls,
-      previous_sources:previousSourcesQueueKeys,
-      next_sources:nextSourcesQueueKeys
+      has_previous_source:previousSourcesQueueKeys?.length,
+      has_next_source:nextSourcesQueueKeys?.length
     }
 
     setControls(prevState => {

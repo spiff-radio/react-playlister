@@ -89,12 +89,12 @@ function App() {
   }
 
   const trackIndex = playlisterControls.track_index;
-  const hasPreviousTracks = playlisterControls?.previous_tracks?.length;
-  const hasNextTracks = playlisterControls?.next_tracks?.length;
+  const hasPreviousTrack = playlisterControls?.has_previous_track;
+  const hasNextTrack = playlisterControls?.has_next_track;
 
   const sourceIndex = playlisterControls.source_index;
-  const hasPreviousSources = playlisterControls?.previous_sources?.length;
-  const hasNextSources = playlisterControls?.next_sources?.length;
+  const hasPreviousSource = playlisterControls?.has_previous_source;
+  const hasNextSource = playlisterControls?.has_next_source;
 
   console.log("APP RELOAD");
 
@@ -139,11 +139,11 @@ function App() {
               <strong>track #{trackIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasPreviousTracks}
+              disabled={!hasPreviousTrack}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasNextTracks}
+              disabled={!hasNextTrack}
               >Next</button>
             </p>
 
@@ -151,11 +151,11 @@ function App() {
               <strong>source #{sourceIndex}</strong>
               <button
               onClick={(e) => playlisterRef.current.previousSource()}
-              disabled={!hasPreviousSources}
+              disabled={!hasPreviousSource}
               >Previous</button>
               <button
               onClick={(e) => playlisterRef.current.nextSource()}
-              disabled={!hasNextSources}
+              disabled={!hasNextSource}
               >Next</button>
             </p>
 
