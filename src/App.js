@@ -88,11 +88,13 @@ function App() {
     setUrls(arr);
   }
 
-  const trackIndex = playlisterControls.track_index;
+  const track = playlisterControls.track;
+  const trackIndex = track ? track.index : undefined;
   const hasPreviousTrack = playlisterControls?.has_previous_track;
   const hasNextTrack = playlisterControls?.has_next_track;
 
-  const sourceIndex = playlisterControls.source_index;
+  const source = playlisterControls.source;
+  const sourceIndex = source ? source.index : undefined;
   const hasPreviousSource = playlisterControls?.has_previous_source;
   const hasNextSource = playlisterControls?.has_next_source;
 
