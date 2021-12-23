@@ -44,6 +44,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const skipNoSources = props.skipNoSources ?? true;
 
   //do we iterate URLs backwards ?
+  //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
 
   //are we currently skipping ?
@@ -64,10 +65,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [url, setUrl] = useState();//current url
 
   //build a queue of keys based on an array
-  //If index is NOT defined, it will return the full array.
-  const getArrayQueue = (array,item,loop,backwards) => {
+  //If item is NOT defined, it will return the full array.
+  //If item IS defined (and exists); it will return the items following the current one.
+  const getArrayQueue = (array,startItem,loop,backwards) => {
 
-    let index = array.indexOf(item);
+    //since we do not always pass a reference to startItem, we need to use a custom fn to check if it is our match.
+    const isStartItem = (item,index,array) => {
+      return ( JSON.stringify(item) === JSON.stringify(startItem) );
+    }
+
+    let index = array.findIndex(isStartItem);
     index = (index === -1) ? undefined : index;
 
     let previousQueue = [];
@@ -242,21 +249,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return{
           ...prevState,
           track:newTrack,
-          source_index:undefined
+          source:undefined
         }
       })
     }else{ //no playable tracks
       DEBUG && console.log("REACTPLAYLISTER / NO PLAYABLE TRACKS");
       handlePlaylistEnded();
     }
-  }
-
-  const previousTrack = () => {
-    skipTrack(true);
-  }
-
-  const nextTrack = () => {
-    skipTrack(false);
   }
 
   const skipSource = (goBackwards) => {
@@ -292,6 +291,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
+  const previousTrack = () => {
+    skipTrack(true);
+  }
+
+  const nextTrack = () => {
+    skipTrack(false);
+  }
+
   const previousSource = () => {
     skipSource(true);
   }
@@ -300,6 +307,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipSource(false);
   }
 
+  //get a track based on a source item
   const getSourceTrack = (source) => {
     return playlist.find(function(track) {
       return ( track.sources.includes(source) );
@@ -573,8 +581,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     appendControls = {
       ...appendControls,
-      has_previous_track:  previousTracksQueue?.length,
-      has_next_track:      nextTracksQueue?.length
+      has_previous_track:  (previousTracksQueue?.length !== 0),
+      has_next_track:      (nextTracksQueue?.length !== 0)
     }
 
     //SOURCE
@@ -583,8 +591,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     appendControls = {
       ...appendControls,
-      has_previous_sources:previousSourcesQueue?.length,
-      has_next_source:nextSourcesQueue?.length
+      has_previous_sources: (previousSourcesQueue?.length !== 0),
+      has_next_source:      (nextSourcesQueue?.length !== 0)
     }
 
     setControls(prevState => {
