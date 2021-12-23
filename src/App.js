@@ -100,6 +100,9 @@ function App() {
 
   console.log("APP RELOAD");
 
+  console.log("TRACK IDX",trackIndex);
+  console.log("SOURCE IDX",sourceIndex);
+
   return (
     <div className="App">
       <div id="intro">
