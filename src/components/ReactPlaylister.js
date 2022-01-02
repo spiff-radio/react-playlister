@@ -481,17 +481,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //set default indices from props (if any)
   useEffect(() => {
 
-    const indexes = Array.isArray(props.index) ? props.index : [props.index];//force array
-    if (indexes[0] === undefined) return;
+    const propIndices = Array.isArray(props.index) ? props.index : [props.index];//force array
+    if (propIndices[0] === undefined) return;
 
     //compare against previous state
     if (indices){
-      if( JSON.stringify(indexes)==JSON.stringify(indices) ) return;
+      if( JSON.stringify(propIndices)==JSON.stringify(indices) ) return;
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / SET INDEXES FROM PROP AT INIT",indexes);
+    DEBUG && console.log("REACTPLAYLISTER / SET INDEXES FROM PROP AT INIT",propIndices);
 
-    setIndices(indices);
+    setIndices(propIndices);
 
   }, [props.index]);
 
@@ -608,7 +608,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //set current_source property of the track object.
   //It will be used as fallback if no source is specified when selecting a track.
 
-    useEffect(() => {
+  useEffect(() => {
 
     const track = controls.track;
     const source = controls.source;
@@ -644,26 +644,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //select source
   useEffect(() => {
 
-    let newSource = undefined;
     const track = controls.track;
-    const source = controls.source;
+    if (track === undefined) return;
 
-    if (track !== undefined){
-      if (track.sources.length){
-        if (source){
-          setSource(newSource);
-        }
-      }else if (playRequest && skipNoSources){
+    //this track has no sources
+    if (!track.sources.length){
+      if (playRequest && skipNoSources){
         DEBUG && console.log("REACTPLAYLISTER / NO SOURCES FOR PLAYING TRACK, SKIP IT",track);
         skipTrack();
-        return;
       }
-
     }
 
+    const source = controls.source;
+    if (source === undefined) return;
 
+    setSource(source);
 
-  }, [controls]);
+  }, [controls.track,controls.source]);
 
   //set player URL.
   useEffect(() => {
