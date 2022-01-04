@@ -65,7 +65,7 @@ export const AppFeedback = props => {
       <ul>
         {
           props.sources.map((source,sourceKey) => {
-            const isSelected = (props.source_index === sourceKey);
+            const isSelected = (source.current === true);
             const isCurrent = props.current && isSelected;
 
             return(
@@ -108,8 +108,6 @@ content
     {
       playlist.map((track,trackKey) => {
         const isCurrent = (props.controls?.track?.index === trackKey);
-        console.log("IS CURRENT",isCurrent,track);
-        const source_index = track?.current_source?.index;
         return (
           <li
           key={trackKey}
@@ -125,7 +123,6 @@ content
             sources={track.sources}
             current={isCurrent}
             track_index={trackKey}
-            source_index={source_index}
             onSelect={props.onSelect}
             />
           </li>

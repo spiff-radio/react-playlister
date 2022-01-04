@@ -147,6 +147,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const filterSource = (source) => {
 
+    if (source === undefined) return false;
+
     if (autoskip){
 
       if (!source.playable){
@@ -310,14 +312,33 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //get a track based on a source item
   const getSourceTrack = (source) => {
     return playlist.find(function(track) {
-      return ( track.sources.includes(source) );
+      return ( track.index === source.trackIndex );
+    });
+  }
+
+  //get the current source for a track
+  const getCurrentTrackSource = (track) => {
+    return track.sources.find(function(source) {
+      return ( source.current === true );
     });
   }
 
   const setSourceNotPlayable = (source) => {
 
-    const track = getSourceTrack(source);
+    const newSource = {
+      ...source,
+      playable:false
+    }
+
     console.log("SET SOURCE NOT PLAYABLE",source);
+
+    updateSource(source,newSource);
+
+  }
+
+  const updateTrack = (track,newTrack) => {
+
+    console.log("UPDATE TRACK FROM > TO",track,newTrack);
 
     //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
     //https://github.com/facebook/react/issues/16858#issuecomment-534257343
@@ -327,22 +348,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         prevState.map(
           (playlistTrack) => {
             if (playlistTrack === track){
-              const newSources = playlistTrack.sources.map(
-                (trackSource) => {
-                  if (trackSource === source){
-                    return {
-                      ...trackSource,
-                      playable:false
-                    }
-                  }else{
-                    return trackSource;
-                  }
-                }
-              )
-              return {
-                ...playlistTrack,
-                sources:newSources
-              };
+              return newTrack;
             }else{
               return playlistTrack;
             }
@@ -351,6 +357,32 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
         return newState;
     });
+
+  }
+
+  const updateSource = (source,newSource) => {
+
+    console.log("UPDATE SOURCE FROM > TO",source,newSource);
+
+    const track = getSourceTrack(source);
+
+    const newSources = track.sources.map(
+      (item) => {
+        if (item === source){
+          return newSource;
+        }else{
+          return item;
+        }
+      }
+    )
+
+    const newTrack = {
+      ...track,
+      sources:newSources
+    }
+
+    updateTrack(track,newTrack);
+
   }
 
   //build our initial data
@@ -399,9 +431,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return {
           url:url,
           index:i,
+          trackIndex:track_index,
           playable:ReactPlayer.canPlay(url),
           autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
-          provider:provider ? {name:provider.name,key:provider.key} : undefined
+          provider:provider ? {name:provider.name,key:provider.key} : undefined,
+          current:false,
         }
       });
 
@@ -414,15 +448,28 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
       */
 
+
       let track = {
         sources:sources
       }
 
+      //set default source
+      const currentSource = getNextSource(track);
+      sources = track.sources.map(
+        (item) => {
+          return {
+            ...item,
+            current:(item === currentSource)
+          }
+        }
+      )
+
+
       track = {
         ...track,
+        sources:sources,
         index:track_index,
         playable: hasPlayableSources(track),
-        current_source: getNextSource(track)//default source index
       }
 
       return track;
@@ -437,46 +484,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     );
 
-
-    //try to restore previous values of current_source
-    /*TOUFIX TO IMPROVE ? URGENT
-    if (playlist){//we have an old playlist record
-
-
-      //current_source
-      newPlaylist.forEach(function(track,i){
-
-        const oldTrack = playlist[i];
-
-        if (oldTrack){
-          const oldSourceIndex = oldTrack.current_source;
-
-          if (oldSourceIndex){
-              const oldSource = oldTrack.sources[oldSourceIndex];
-              const oldSourceUrl = oldSource.url;
-
-              const newSource = track.sources.find(source => {
-                return source.url === oldSourceUrl
-              })
-
-              const newSourceIndex = track.sources.indexOf(newSource);
-
-              if (newSourceIndex !== -1){
-                  newPlaylist[i].current_source = newSourceIndex;
-              }
-
-          }
-        }
-
-
-      })
-    }
-    */
-
-
     setPlaylist(newPlaylist);
 
   }, [props.urls]);
+
+  useEffect(() => {
+    console.log("PLAYLIST UPDATED",playlist);
+  }, [playlist]);
+
 
   //set default indices from props (if any)
   useEffect(() => {
@@ -484,7 +499,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const propIndices = Array.isArray(props.index) ? props.index : [props.index];//force array
     if (propIndices[0] === undefined) return;
 
-    //compare against previous state
+    //compare against previous state and eventually abord
     if (indices){
       if( JSON.stringify(propIndices)==JSON.stringify(indices) ) return;
     }
@@ -516,38 +531,42 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [indices]);
 
-  //if track/source is not defined
+  //if track or source are not defined, select them automatically:
+  //TRACK: first available
+  //SOURCE: either the 'selected' one, or get the first playable one.
   useEffect(() => {
     if ( !playlist ) return;
 
     let track = controls.track;
-    let source = controls.source;
 
     //track
-    if ( track === undefined ){
-      track = getNextTrack(playlist);
-      if (track === undefined) return;
+    if (!track){
+      const firstTrack = getNextTrack(playlist);
+      track = firstTrack;
+      if (!track) return;//abord
       DEBUG && console.log("REACTPLAYLISTER / SET DEFAULT TRACK",track);
     }
 
     //source
-    if ( source === undefined ){
+    let source = controls.source;
 
-      //use current source if any
-      //TOUFIX TOUIMPROVE URGENT
-      if (track.current_source){
-        const checkSource = track.sources[track.current_source];
-        //be sure it can be loaded
-        if ( checkSource && filterSource(checkSource) ){
-          source = checkSource;
-        }
-      }
+    if (!source){
 
-      if (source !== undefined){
-        DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+track,source);
-      }else{
-        source = getNextSource(track);
-        DEBUG && console.log("REACTPLAYLISTER / SET SOURCE INDEX FOR TRACK #"+track,source);
+      //last selected source
+      let currentSource = getCurrentTrackSource(track);
+      currentSource = filterSource(currentSource) ? currentSource : undefined;//ensure it can be played
+
+      //first available source
+      const firstSource = getNextSource(track);
+
+      //so source selected is...
+      source = currentSource ? currentSource : firstSource;
+      if (!source) return;//abord
+
+      if (source === currentSource){
+        DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+track.index,currentSource.index);
+      }else if (source === firstSource){
+        DEBUG && console.log("REACTPLAYLISTER / SET SOURCE INDEX FOR TRACK #"+track.index,firstSource.index);
       }
 
     }
@@ -605,9 +624,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [controls.track,controls.source,loop,autoskip]);
 
-  //set current_source property of the track object.
-  //It will be used as fallback if no source is specified when selecting a track.
-
+  //set 'current' source property
   useEffect(() => {
 
     const track = controls.track;
@@ -616,27 +633,21 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (track === undefined) return;
     if (source === undefined) return;
 
-    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
-    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
-    setPlaylist(prevState => {
+    const newSources = track.sources.map(
+      (item) => {
+        return {
+          ...item,
+          current:(item === source)
+        }
+      }
+    )
 
-      const newState =
-        prevState.map(
-          (playlistItem) => {
-            if (playlistItem === track){
-              return {
-                ...track,
-                current_source:source
-              };
-            }else{
-              return playlistItem;
-            }
-          }
-        )
+    const newTrack = {
+      ...track,
+      sources:newSources
+    }
 
-        return newState;
-    });
-
+    updateTrack(track,newTrack);
 
   }, [controls.track,controls.source]);
 
