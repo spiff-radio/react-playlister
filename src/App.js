@@ -15,6 +15,7 @@ function App() {
     'https://www.youtube.com/watch?v=E11DAkrjlP8',
     [
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
+      'https://www.youtube.com/watch?v=K5LU8K7ZK34',
       'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends',
       'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
@@ -35,6 +36,7 @@ function App() {
   const [index,setIndex] = useState([3,1]);
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState({});
+  const [playlisterPair, setPlaylisterPair] = useState({});
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
@@ -50,6 +52,11 @@ function App() {
   const handleControlsUpdated = (controls) => {
     console.log("APP / CONTROLS UPDATED",controls);
     setPlaylisterControls(controls);
+  }
+
+  const handlePairUpdated = (pair) => {
+    console.log("APP / PAIR UPDATED",pair);
+    setPlaylisterPair(pair);
   }
 
   const handlePlaylistEnded = () => {
@@ -88,13 +95,11 @@ function App() {
     setUrls(arr);
   }
 
-  const track = playlisterControls.track;
-  const trackIndex = track ? track.index : undefined;
+  const trackIndex = playlisterPair[0] ?? undefined;
+  const sourceIndex = playlisterPair[1] ?? undefined;
+
   const hasPreviousTrack = playlisterControls?.has_previous_track;
   const hasNextTrack = playlisterControls?.has_next_track;
-
-  const source = playlisterControls.source;
-  const sourceIndex = source ? source.index : undefined;
   const hasPreviousSource = playlisterControls?.has_previous_source;
   const hasNextSource = playlisterControls?.has_next_source;
 
@@ -130,6 +135,7 @@ function App() {
         <div id="output">
           <h3>Feedback</h3>
           <AppFeedback
+          playlister={playlisterRef}
           playlist={playlisterPlaylist}
           controls={playlisterControls}
           onSelect={handleSourceSelect}
@@ -252,6 +258,7 @@ function App() {
       Callback props
       */
       onPlaylistUpdated={handlePlaylistUpdated}
+      onPairUpdated={handlePairUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistEnded={handlePlaylistEnded}
       onSkipping={handleSkipping}

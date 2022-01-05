@@ -52,44 +52,50 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [indices,setIndices] = useState();
   const [playlist,setPlaylist] = useState();//our (transformed) datas
+
   const [controls,setControls] = useState({
-    track:undefined,
-    source:undefined,
     has_previous_track:false,
     has_next_track:false,
-    has_previous_sources:false,
+    has_previous_source:false,
     has_next_source:false
   });
 
-  const [source, setSource] = useState();
+  const [pair,setPair] = useState({
+    track:undefined,
+    source:undefined
+  });
+  const [source,setSource] = useState();
   const [url, setUrl] = useState();//current url
 
   //build a queue of keys based on an array
-  //If item is NOT defined, it will return the full array.
-  //If item IS defined (and exists); it will return the items following the current one.
-  const getArrayQueue = (array,startItem,loop,backwards) => {
+  //If needle is NOT defined, it will return the full array.
+  //If needle IS defined (and exists); it will return the items following the needle.
+  const getArrayQueue = (array,needle,loop,backwards) => {
 
-    //since we do not always pass a reference to startItem, we need to use a custom fn to check if it is our match.
-    const isStartItem = (item,index,array) => {
-      return ( JSON.stringify(item) === JSON.stringify(startItem) );
-    }
-
-    let index = array.findIndex(isStartItem);
-    index = (index === -1) ? undefined : index;
-
+    let needleIndex = undefined;
     let previousQueue = [];
     let nextQueue = [];
     let queue = [];
 
-    if (index !== undefined){
-      var nextIndex = index+1;
+    const isStartItem = (item,index,array) => {
+      return ( item.index === needle.index );
+    }
+
+    //find the array index of the needle
+    if (needle){
+      needleIndex = array.findIndex(isStartItem);
+      needleIndex = (needleIndex === -1) ? undefined : needleIndex;
+    }
+
+    if (needleIndex !== undefined){
+      var nextIndex = needleIndex+1;
 
       if (nextIndex < array.length){
         nextQueue = array.slice(nextIndex);
       }
 
-      if (index > 0){
-        previousQueue = array.slice(0,index);
+      if (needleIndex > 0){
+        previousQueue = array.slice(0,needleIndex);
       }
 
     }else{
@@ -178,10 +184,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setBackwards(false);
     setSkipping(false);//if we were skipping
 
-    const track = controls.track;
-    const source = controls.source;
+    const track = pair.track;
+    const source = pair.source;
 
-    console.log("REACTPLAYLISTER / SOURCE READY FOR TRACK",source,track);
+    console.log("REACTPLAYLISTER / SOURCE #"+source.index+" READY FOR TRACK #"+track.index,source.url);
 
     //inherit React Player prop
     if (typeof props.onReady === 'function') {
@@ -192,7 +198,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceError = (e) => {
 
-    setSourceNotPlayable(controls.source);
+    setSourceNotPlayable(pair.source);
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -213,7 +219,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onEnded();
     }
 
-    const track = controls.track;
+    const track = pair.track;
     const queue = getTracksQueue(playlist,undefined,false,false);
     const lastTrack = queue[queue.length - 1];
 
@@ -242,17 +248,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
-    const newTrack = getNextTrack(playlist,controls.track,loop,goBackwards);
+    const newTrack = getNextTrack(playlist,pair.track,loop,goBackwards);
 
-    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg,controls.track,newTrack);
+    DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+pair.track.index+backwardsMsg,newTrack.index);
 
     if (newTrack !== undefined){
-      setControls(prevState => {
-        return{
-          ...prevState,
-          track:newTrack,
-          source:undefined
-        }
+      setPair({
+        track:newTrack,
+        source:undefined
       })
     }else{ //no playable tracks
       DEBUG && console.log("REACTPLAYLISTER / NO PLAYABLE TRACKS");
@@ -264,8 +267,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setSkipping(true);
 
-    const track = controls.track;
-    const source = controls.source;
+    const track = pair.track;
+    const source = pair.source;
 
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
@@ -284,7 +287,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM SOURCE -> SOURCE",source,newSource);
 
-    setControls(prevState => {
+    setPair(prevState => {
       return{
         ...prevState,
         source:newSource
@@ -307,6 +310,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const nextSource = () => {
     skipSource(false);
+  }
+
+  const getTrackByIndex = (index) => {
+    return playlist.find(function(track) {
+      return ( track.index === index );
+    });
   }
 
   //get a track based on a source item
@@ -429,13 +438,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         const provider = reactplayerProviders.find(isSourceProvider);
 
         return {
-          url:url,
           index:i,
           trackIndex:track_index,
+          current:false,
           playable:ReactPlayer.canPlay(url),
+          url:url,
           autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
           provider:provider ? {name:provider.name,key:provider.key} : undefined,
-          current:false,
         }
       });
 
@@ -467,9 +476,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       track = {
         ...track,
-        sources:sources,
         index:track_index,
+        current:false,
         playable: hasPlayableSources(track),
+        sources:sources,
       }
 
       return track;
@@ -492,104 +502,90 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("PLAYLIST UPDATED",playlist);
   }, [playlist]);
 
-
   //set default indices from props (if any)
+  //TOUFIX URGENT
   useEffect(() => {
+
+    if (!playlist) return;
 
     const propIndices = Array.isArray(props.index) ? props.index : [props.index];//force array
     if (propIndices[0] === undefined) return;
 
     //compare against previous state and eventually abord
     if (indices){
-      if( JSON.stringify(propIndices)==JSON.stringify(indices) ) return;
+      if( JSON.stringify(propIndices)===JSON.stringify(indices) ) return;
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / SET INDEXES FROM PROP AT INIT",propIndices);
+    const trackIndex = propIndices[0] ?? undefined;
+    const sourceIndex = propIndices[1] ?? undefined;
+    const track = playlist[trackIndex] ?? undefined;
+    const source = track.sources[sourceIndex] ?? undefined;
 
-    setIndices(propIndices);
+    DEBUG && console.log("REACTPLAYLISTER / SET TRACK & SOURCE FROM PROP",propIndices,track,source);
+
+    setPair({
+      track:track,
+      source:source
+    })
 
   }, [props.index]);
 
-  //load source & track from indices
-  useEffect(() => {
-
-    if (indices === undefined) return;
-
-    const trackIndex = indices[0] ?? undefined;
-    const sourceIndex = indices[1] ?? undefined;
-
-    const track = playlist[trackIndex];
-    const source = track.sources[sourceIndex];
-
-    setControls(prevState => {
-      return{
-        ...prevState,
-        track:track,
-        source:source
-      }
-    })
-
-  }, [indices]);
-
-  //if track or source are not defined, select them automatically:
-  //TRACK: first available
-  //SOURCE: either the 'selected' one, or get the first playable one.
+  //if track is not defined, use the first one available.
   useEffect(() => {
     if ( !playlist ) return;
+    if ( pair.track ) return;//run this hook only if we don't have a track yet
 
-    let track = controls.track;
+    const firstTrack = getNextTrack(playlist);
+    if (!firstTrack) return;//abord
 
-    //track
-    if (!track){
-      const firstTrack = getNextTrack(playlist);
-      track = firstTrack;
-      if (!track) return;//abord
-      DEBUG && console.log("REACTPLAYLISTER / SET DEFAULT TRACK",track);
-    }
+    DEBUG && console.log("REACTPLAYLISTER / SET DEFAULT TRACK",firstTrack);
 
-    //source
-    let source = controls.source;
-
-    if (!source){
-
-      //last selected source
-      let currentSource = getCurrentTrackSource(track);
-      currentSource = filterSource(currentSource) ? currentSource : undefined;//ensure it can be played
-
-      //first available source
-      const firstSource = getNextSource(track);
-
-      //so source selected is...
-      source = currentSource ? currentSource : firstSource;
-      if (!source) return;//abord
-
-      if (source === currentSource){
-        DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+track.index,currentSource.index);
-      }else if (source === firstSource){
-        DEBUG && console.log("REACTPLAYLISTER / SET SOURCE INDEX FOR TRACK #"+track.index,firstSource.index);
-      }
-
-    }
-
-    setControls(prevState => {
-      return{
-        ...prevState,
-        track:track,
-        source:source
-      }
+    setPair({
+      track:firstTrack,
+      source:undefined
     })
 
-  }, [playlist,controls.track,controls.source]);
+  }, [playlist,pair.track]);
+
+  //if source is not defined, use either the 'selected' one, or get the first playable one.
+  useEffect(() => {
+    if ( !playlist ) return;
+    if ( !pair.track ) return;
+    if ( pair.source ) return;//run this hook only if we don't have a source yet
+
+    //last selected source
+    let currentSource = getCurrentTrackSource(pair.track);
+    currentSource = filterSource(currentSource) ? currentSource : undefined;//ensure it can be played
+
+    //first available source
+    const firstSource = getNextSource(pair.track);
+
+    //so source selected is...
+    let source = currentSource ? currentSource : firstSource;
+    if (!source) return;//abord
+
+    if (source === currentSource){
+      DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+pair.track.index,currentSource.index);
+    }else if (source === firstSource){
+      DEBUG && console.log("REACTPLAYLISTER / SET SOURCE INDEX FOR TRACK #"+pair.track.index,firstSource.index);
+    }
+
+    setPair({
+      track:pair.track,
+      source:source
+    })
+
+  }, [playlist,pair]);
 
   //update previous/next controls
   useEffect(() => {
 
     if (!playlist) return;
 
-    const track = controls.track;
+    const track = pair.track;
     if (track === undefined) return;
 
-    const source = controls.source;
+    const source = pair.source;
     if ( (source === undefined) && track.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
 
     let appendControls = {};
@@ -610,7 +606,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     appendControls = {
       ...appendControls,
-      has_previous_sources: (previousSourcesQueue?.length !== 0),
+      has_previous_source: (previousSourcesQueue?.length !== 0),
       has_next_source:      (nextSourcesQueue?.length !== 0)
     }
 
@@ -622,41 +618,52 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
 
-  }, [controls.track,controls.source,loop,autoskip]);
+  }, [pair,loop,autoskip]);
 
-  //set 'current' source property
+  //update the 'current' properties for tracks and sources
   useEffect(() => {
 
-    const track = controls.track;
-    const source = controls.source;
+    const track = pair.track;
+    const source = pair.source;
 
-    if (track === undefined) return;
-    if (source === undefined) return;
+    if (!track) return;
 
-    const newSources = track.sources.map(
-      (item) => {
+    setPlaylist(
+      playlist.map(
+      (trackItem) => {
+
+        const isCurrentTrack = (trackItem.index === track.index);
+
+        //for the selected track only
+        //update the 'current' property of its sources
+
+        const getUpdatedSources = (track) => {
+          return track.sources.map(
+            (sourceItem) => {
+              return {
+                ...sourceItem,
+                current:(sourceItem.index === source?.index)
+              }
+            }
+          )
+        }
+
         return {
-          ...item,
-          current:(item === source)
+          ...trackItem,
+          current:isCurrentTrack,
+          sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
         }
       }
     )
+  );
 
-    const newTrack = {
-      ...track,
-      sources:newSources
-    }
-
-    updateTrack(track,newTrack);
-
-  }, [controls.track,controls.source]);
-
+  }, [pair]);
 
   //select source
   useEffect(() => {
 
-    const track = controls.track;
-    if (track === undefined) return;
+    const track = pair.track;
+    if (!track) return;
 
     //this track has no sources
     if (!track.sources.length){
@@ -666,12 +673,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     }
 
-    const source = controls.source;
+    const source = pair.source;
     if (source === undefined) return;
 
     setSource(source);
 
-  }, [controls.track,controls.source]);
+  }, [pair]);
 
   //set player URL.
   useEffect(() => {
@@ -699,6 +706,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPlaylistUpdated(playlist);
     }
   }, [playlist]);
+
+  //warn parent that data has been updated
+  useEffect(() => {
+    if (typeof props.onPairUpdated === 'function') {
+      const trackIndex = pair.track?.index;
+      const sourceIndex = pair.source?.index;
+      props.onPairUpdated([trackIndex,sourceIndex]);
+    }
+  }, [pair]);
 
   //warn parent that data has been updated
   useEffect(() => {
@@ -733,6 +749,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         },
         nextSource() {
           nextSource();
+        },
+        getTrackByIndex(index){
+          return getTrackByIndex(index);
         },
         getReactPlayer(){
           return reactPlayerRef.current;

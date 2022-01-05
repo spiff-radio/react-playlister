@@ -107,7 +107,10 @@ content
     <ul>
     {
       playlist.map((track,trackKey) => {
-        const isCurrent = (props.controls?.track?.index === trackKey);
+        const playlisterTrack = props.playlister.current.getTrackByIndex(trackKey);
+        const isCurrent = playlisterTrack.current;
+
+
         return (
           <li
           key={trackKey}
