@@ -4,7 +4,7 @@ import 'semantic-ui-css/semantic.min.css';
 import React, { useState, useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 import { AppFeedback } from "./components/AppFeedback";
-
+import { AppControls } from "./components/AppControls";
 
 function App() {
 
@@ -41,7 +41,6 @@ function App() {
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
-  const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
   const handlePlaylistUpdated = (playlist) => {
@@ -67,22 +66,6 @@ function App() {
     console.log((bool===true) ? '**START SKIP**' : '**STOP SKIP**');
   }
 
-  const handlePlay = () =>{
-    setPlayRequest(true);
-    setPlaying(true);
-  }
-
-  const handlePause = () =>{
-    setPlayRequest(false);
-    setPlaying(false);
-  }
-
-  const handleGetReactPlayer = (e) => {
-    e.preventDefault();
-    const player = playlisterRef.current.getReactPlayer();
-    console.log(player);
-  }
-
   const handleSourceSelect = (index) => {
     console.log("APP / SOURCE SELECT",index);
     setIndex(index);
@@ -95,18 +78,8 @@ function App() {
     setUrls(arr);
   }
 
-  const trackIndex = playlisterPair[0] ?? undefined;
-  const sourceIndex = playlisterPair[1] ?? undefined;
-
-  const hasPreviousTrack = playlisterControls?.has_previous_track;
-  const hasNextTrack = playlisterControls?.has_next_track;
-  const hasPreviousSource = playlisterControls?.has_previous_source;
-  const hasNextSource = playlisterControls?.has_next_source;
 
   console.log("APP RELOAD");
-
-  console.log("TRACK IDX",trackIndex);
-  console.log("SOURCE IDX",sourceIndex);
 
   return (
     <div className="App">
@@ -142,74 +115,19 @@ function App() {
           />
         </div>
       </div>
-      {
-        playlisterPlaylist &&
-          <div id="controls">
-
-            <p>
-              <strong>track #{trackIndex}</strong>
-              <button
-              onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasPreviousTrack}
-              >Previous</button>
-              <button
-              onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasNextTrack}
-              >Next</button>
-            </p>
-
-            <p>
-              <strong>source #{sourceIndex}</strong>
-              <button
-              onClick={(e) => playlisterRef.current.previousSource()}
-              disabled={!hasPreviousSource}
-              >Previous</button>
-              <button
-              onClick={(e) => playlisterRef.current.nextSource()}
-              disabled={!hasNextSource}
-              >Next</button>
-            </p>
-
-            <p>
-              <strong>playing</strong>
-              <span>{playing ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setPlayRequest(!playing)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>loop</strong>
-              <span>{loop ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setLoop(!loop)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>shuffle</strong>
-              <span>{shuffle ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setShuffle(!shuffle)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>autoskip</strong>
-              <span>{autoskip ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setAutoskip(!autoskip)}
-              >toggle</button><br/>
-            </p>
-
-            <p>
-              <button
-              onClick={handleGetReactPlayer}
-              >Get ReactPlayer instance (see console)</button>
-            </p>
-
-          </div>
-      }
+      <AppControls
+      playlister={playlisterRef}
+      playlist={playlisterPlaylist}
+      current={playlisterPair}
+      controls={playlisterControls}
+      loop={loop}
+      shuffle={shuffle}
+      autoskip={autoskip}
+      onTogglePlay={(bool) => setPlayRequest(bool)}
+      onToggleLoop={(bool) => setLoop(bool)}
+      onToggleShuffle={(bool) => setShuffle(bool)}
+      onToggleAutoskip={(bool) => setAutoskip(bool)}
+      />
       <ReactPlaylister
       ref={playlisterRef}
 
@@ -264,10 +182,8 @@ function App() {
       onSkipping={handleSkipping}
       /*
       ReactPlayer callback props
-      */
-      onPlay={handlePlay}
-      onPause={handlePause}
-      /*
+      onPlay={}
+      onPause={}
       onReady={}
       onStart={}
       onProgress={}

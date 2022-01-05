@@ -57,7 +57,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     has_previous_track:false,
     has_next_track:false,
     has_previous_source:false,
-    has_next_source:false
+    has_next_source:false,
+    playing:false,
+    playLoading:false,//when play is requested but that media is not playing yet.
+    mediaLoading:false,
   });
 
   const [pair,setPair] = useState({
@@ -184,6 +187,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setBackwards(false);
     setSkipping(false);//if we were skipping
 
+    setControls(prevState => {
+      return{
+        ...prevState,
+        mediaLoading:false
+      }
+    })
+
     const track = pair.track;
     const source = pair.source;
 
@@ -228,6 +238,37 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }else if(skipEnded){//skip to next track
       nextTrack();
     }
+
+  }
+
+  const handleSourcePlay = () => {
+    //inherit React Player prop
+    if (typeof props.onPlay === 'function') {
+      props.onPlay();
+    }
+
+    setControls(prevState => {
+      return{
+        ...prevState,
+        playing:true,
+        playLoading:false
+      }
+    })
+
+  }
+
+  const handleSourcePause = () => {
+    //inherit React Player prop
+    if (typeof props.onPause === 'function') {
+      props.onPause();
+    }
+
+    setControls(prevState => {
+      return{
+        ...prevState,
+        playing:false
+      }
+    })
 
   }
 
@@ -700,6 +741,26 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [source]);
 
+  //when play is requested, set loading until media is playing
+  useEffect(() => {
+    setControls(prevState => {
+      return{
+        ...prevState,
+        playLoading:playRequest
+      }
+    })
+  }, [playRequest]);
+
+  //when media URL is loaded, set loading until media is ready
+  useEffect(() => {
+    setControls(prevState => {
+      return{
+        ...prevState,
+        mediaLoading:(url)
+      }
+    })
+  }, [url]);
+
   //warn parent that data has been updated
   useEffect(() => {
     if (typeof props.onPlaylistUpdated === 'function') {
@@ -792,10 +853,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       onReady={handleSourceReady}
       onError={handleSourceError}
       onEnded={handleSourceEnded}
+      onPlay={handleSourcePlay}
+      onPause={handleSourcePause}
 
       //inherit methods
-      onPlay={props.onPlay}
-      onPause={props.onPause}
       onStart={props.onStart}
       onBuffer={props.onBuffer}
       onBufferEnd={props.onBufferEnd}
