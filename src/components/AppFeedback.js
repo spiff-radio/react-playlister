@@ -4,7 +4,8 @@ import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
-  const playlist = props.playlist || [];
+  const urls = props.urls || [];
+  const playlisterData = props.playlisterData;
 
   const SourceFeedback = props => {
 
@@ -104,35 +105,43 @@ content
   }
 
   return(
-    <ul>
-    {
-      playlist.map((track,trackKey) => {
-        const playlisterTrack = props.playlister.current.getTrackByIndex(trackKey);
-        const isCurrent = playlisterTrack.current;
+    <>
+      {
+        playlisterData &&
+        <ul>
+        {
+          urls.map((url,index) => {
 
+            const track = playlisterData.playlist.find(function(track) {
+              return ( track.index === index );
+            });
 
-        return (
-          <li
-          key={trackKey}
-          className={
-            classNames({
-              track:true,
-              playable:track.playable,
-              current:isCurrent
-            })
-          }
-          >
-            <TrackFeedback
-            sources={track.sources}
-            current={isCurrent}
-            track_index={trackKey}
-            onSelect={props.onSelect}
-            />
-          </li>
-        );
-      })
-    }
-    </ul>
+            const isCurrent = track.current;
+
+            return (
+              <li
+              key={index}
+              className={
+                classNames({
+                  track:true,
+                  playable:track.playable,
+                  current:isCurrent
+                })
+              }
+              >
+                <TrackFeedback
+                sources={track.sources}
+                current={isCurrent}
+                track_index={index}
+                onSelect={props.onSelect}
+                />
+              </li>
+            );
+          })
+        }
+        </ul>
+      }
+    </>
   );
 
 }

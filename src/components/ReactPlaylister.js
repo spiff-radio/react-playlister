@@ -354,6 +354,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const getTrackByIndex = (index) => {
+    if (!playlist) return;
     return playlist.find(function(track) {
       return ( track.index === index );
     });
@@ -756,40 +757,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setControls(prevState => {
       return{
         ...prevState,
-        mediaLoading:(url)
+        mediaLoading:(url !== undefined)
       }
     })
   }, [url]);
 
   //warn parent that data has been updated
   useEffect(() => {
-    if (typeof props.onPlaylistUpdated === 'function') {
-      props.onPlaylistUpdated(playlist);
-    }
-  }, [playlist]);
+    if (!playlist) return;
+    if (typeof props.onFeedback === 'function') {
 
-  //warn parent that data has been updated
-  useEffect(() => {
-    if (typeof props.onPairUpdated === 'function') {
-      const trackIndex = pair.track?.index;
-      const sourceIndex = pair.source?.index;
-      props.onPairUpdated([trackIndex,sourceIndex]);
-    }
-  }, [pair]);
-
-  //warn parent that data has been updated
-  useEffect(() => {
-    if (typeof props.onControlsUpdated === 'function') {
-      props.onControlsUpdated(controls);
+      const output = {
+        ...controls,
+        playlist:playlist
+      }
+      props.onFeedback(output);
     }
   }, [controls]);
-
-  //warn parent that we're skipping
-  useEffect(()=> {
-    if (typeof props.onSkipping === 'function') {
-      props.onSkipping(skipping);
-    }
-  }, [skipping]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740

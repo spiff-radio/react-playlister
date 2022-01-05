@@ -4,18 +4,25 @@ import { Label } from 'semantic-ui-react';
 
 export const AppControls = props => {
 
-  const playlisterControls = props.controls;
+  const playlisterData = props.playlisterData;
   const playlisterRef = props.playlister;
-  const playlisterPair = props.current;
 
+  //get current track & source
+  const track = playlisterData?.playlist.find(function(track) {
+    return track.current;
+  });
 
-  const trackIndex = playlisterPair[0] ?? undefined;
-  const sourceIndex = playlisterPair[1] ?? undefined;
+  const source = track?.sources.find(function(source) {
+    return source.current;
+  });
 
-  const hasPreviousTrack = playlisterControls?.has_previous_track;
-  const hasNextTrack = playlisterControls?.has_next_track;
-  const hasPreviousSource = playlisterControls?.has_previous_source;
-  const hasNextSource = playlisterControls?.has_next_source;
+  const trackIndex = track?.index;
+  const sourceIndex = source?.index;
+
+  const hasPreviousTrack = playlisterData?.has_previous_track;
+  const hasNextTrack = playlisterData?.has_next_track;
+  const hasPreviousSource = playlisterData?.has_previous_source;
+  const hasNextSource = playlisterData?.has_next_source;
 
   const handleLoop = (bool) => {
     if (typeof props.onToggleLoop === 'function') {
@@ -50,76 +57,81 @@ export const AppControls = props => {
 
   return(
     <div id="controls">
+      <>
+      {
+        playlisterData &&
+        <>
+          <p>
+            <strong>track #{trackIndex}</strong>
+            <button
+            onClick={(e) => playlisterRef.current.previousTrack()}
+            disabled={!hasPreviousTrack}
+            >Previous</button>
+            <button
+            onClick={(e) => playlisterRef.current.nextTrack()}
+            disabled={!hasNextTrack}
+            >Next</button>
+          </p>
 
-      <p>
-        <strong>track #{trackIndex}</strong>
-        <button
-        onClick={(e) => playlisterRef.current.previousTrack()}
-        disabled={!hasPreviousTrack}
-        >Previous</button>
-        <button
-        onClick={(e) => playlisterRef.current.nextTrack()}
-        disabled={!hasNextTrack}
-        >Next</button>
-      </p>
+          <p>
+            <strong>source #{sourceIndex}</strong>
+            <button
+            onClick={(e) => playlisterRef.current.previousSource()}
+            disabled={!hasPreviousSource}
+            >Previous</button>
+            <button
+            onClick={(e) => playlisterRef.current.nextSource()}
+            disabled={!hasNextSource}
+            >Next</button>
+          </p>
 
-      <p>
-        <strong>source #{sourceIndex}</strong>
-        <button
-        onClick={(e) => playlisterRef.current.previousSource()}
-        disabled={!hasPreviousSource}
-        >Previous</button>
-        <button
-        onClick={(e) => playlisterRef.current.nextSource()}
-        disabled={!hasNextSource}
-        >Next</button>
-      </p>
+          <p>
+            <strong>playing</strong>
+            {
+              (playlisterData.playLoading || playlisterData.mediaLoading) ?
+              <span>...</span>
+              :
+              <span>{playlisterData.playing ? 'true' : 'false'}</span>
+            }
 
-      <p>
-        <strong>playing</strong>
-        {
-          (playlisterControls.playLoading || playlisterControls.mediaLoading) ?
-          <span>...</span>
-          :
-          <span>{playlisterControls.playing ? 'true' : 'false'}</span>
-        }
+            &nbsp;
+            <button
+            onClick={(e) => handlePlay(!playlisterData.playing)}
+            >toggle</button>
+          </p>
 
-        &nbsp;
-        <button
-        onClick={(e) => handlePlay(!playlisterControls.playing)}
-        >toggle</button>
-      </p>
+          <p>
+            <strong>loop</strong>
+            <span>{props.loop ? 'true' : 'false'}</span>&nbsp;
+            <button
+            onClick={(e) => handleLoop(!props.loop)}
+            >toggle</button>
+          </p>
 
-      <p>
-        <strong>loop</strong>
-        <span>{props.loop ? 'true' : 'false'}</span>&nbsp;
-        <button
-        onClick={(e) => handleLoop(!props.loop)}
-        >toggle</button>
-      </p>
+          <p>
+            <strong>shuffle</strong>
+            <span>{props.shuffle ? 'true' : 'false'}</span>&nbsp;
+            <button
+            onClick={(e) => handleShuffle(!props.shuffle)}
+            >toggle</button>
+          </p>
 
-      <p>
-        <strong>shuffle</strong>
-        <span>{props.shuffle ? 'true' : 'false'}</span>&nbsp;
-        <button
-        onClick={(e) => handleShuffle(!props.shuffle)}
-        >toggle</button>
-      </p>
+          <p>
+            <strong>autoskip</strong>
+            <span>{props.autoskip ? 'true' : 'false'}</span>&nbsp;
+            <button
+            onClick={(e) => handleAutoskip(!props.autoskip)}
+            >toggle</button><br/>
+          </p>
 
-      <p>
-        <strong>autoskip</strong>
-        <span>{props.autoskip ? 'true' : 'false'}</span>&nbsp;
-        <button
-        onClick={(e) => handleAutoskip(!props.autoskip)}
-        >toggle</button><br/>
-      </p>
-
-      <p>
-        <button
-        onClick={handleGetReactPlayer}
-        >Get ReactPlayer instance (see console)</button>
-      </p>
-
+          <p>
+            <button
+            onClick={handleGetReactPlayer}
+            >Get ReactPlayer instance (see console)</button>
+          </p>
+        </>
+      }
+      </>
     </div>
   );
 

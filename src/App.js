@@ -34,36 +34,20 @@ function App() {
   ]);
 
   const [index,setIndex] = useState([3,1]);
-  const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
-  const [playlisterControls, setPlaylisterControls] = useState({});
-  const [playlisterPair, setPlaylisterPair] = useState({});
+  const [playlisterData, setPlaylisterData] = useState();
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  const handlePlaylistUpdated = (playlist) => {
-    console.log("APP / PLAYLIST UPDATED",playlist);
-    setPlaylisterPlaylist(playlist);
-  }
-
-  const handleControlsUpdated = (controls) => {
-    console.log("APP / CONTROLS UPDATED",controls);
-    setPlaylisterControls(controls);
-  }
-
-  const handlePairUpdated = (pair) => {
-    console.log("APP / PAIR UPDATED",pair);
-    setPlaylisterPair(pair);
+  const handleFeedback = (data) => {
+    console.log("APP / FEEDBACK RECEIVED",data);
+    setPlaylisterData(data);
   }
 
   const handlePlaylistEnded = () => {
     console.log("PLAYLIST ENDED");
-  }
-
-  const handleSkipping = (bool) => {
-    console.log((bool===true) ? '**START SKIP**' : '**STOP SKIP**');
   }
 
   const handleSourceSelect = (index) => {
@@ -108,18 +92,15 @@ function App() {
         <div id="output">
           <h3>Feedback</h3>
           <AppFeedback
-          playlister={playlisterRef}
-          playlist={playlisterPlaylist}
-          controls={playlisterControls}
+          urls={urls}
+          playlisterData={playlisterData}
           onSelect={handleSourceSelect}
           />
         </div>
       </div>
       <AppControls
       playlister={playlisterRef}
-      playlist={playlisterPlaylist}
-      current={playlisterPair}
-      controls={playlisterControls}
+      playlisterData={playlisterData}
       loop={loop}
       shuffle={shuffle}
       autoskip={autoskip}
@@ -175,11 +156,8 @@ function App() {
       /*
       Callback props
       */
-      onPlaylistUpdated={handlePlaylistUpdated}
-      onPairUpdated={handlePairUpdated}
-      onControlsUpdated={handleControlsUpdated}
+      onFeedback={handleFeedback}
       onPlaylistEnded={handlePlaylistEnded}
-      onSkipping={handleSkipping}
       /*
       ReactPlayer callback props
       onPlay={}
