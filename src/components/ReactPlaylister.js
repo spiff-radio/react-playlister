@@ -686,7 +686,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [pair]);
 
-  //select source
+  //set source URL (or skip track)
   useEffect(() => {
 
     const track = pair.track;
@@ -698,41 +698,36 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         DEBUG && console.log("REACTPLAYLISTER / NO SOURCES FOR PLAYING TRACK, SKIP IT",track);
         skipTrack();
       }
+      return;
     }
+
+    /*
+    Set URL from source
+    */
 
     const source = pair.source;
-    if (source === undefined) return;
+    if (!source) return;
 
-    setSource(source);
-
-  }, [pair]);
-
-  //set player URL.
-  useEffect(() => {
-    DEBUG && console.log("REACTPLAYLISTER / SET SOURCE",source);
-    if (source){
-      if (url !== source.url){
-          setUrl(source.url);
-      }else{
-        //if that source has already played, resets it.
-        const played = reactPlayerRef.current.getCurrentTime();
-        if (played){
-          DEBUG && console.log("REACTPLAYLISTER / RESET SOURCE",source);
-          reactPlayerRef.current.seekTo(0);
-        }
-      }
+    if (url !== source.url){
+        setUrl(source.url);
     }else{
-      setUrl();
+      //if that source has already played, resets it.
+      const played = reactPlayerRef.current.getCurrentTime();
+
+      if (played){
+        DEBUG && console.log("REACTPLAYLISTER / RESET SOURCE",source);
+        reactPlayerRef.current.seekTo(0);
+      }
     }
 
-  }, [source]);
+  }, [pair]);
 
   //when play is requested, set loading until media is playing
   useEffect(() => {
     setControls(prevState => {
       return{
         ...prevState,
-        playLoading:playRequest
+        playLoading:prevState.playing ? false : playRequest
       }
     })
   }, [playRequest]);

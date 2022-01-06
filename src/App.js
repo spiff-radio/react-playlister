@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.scss';
 import 'semantic-ui-css/semantic.min.css';
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 import { AppFeedback } from "./components/AppFeedback";
 import { AppControls } from "./components/AppControls";
@@ -40,6 +40,13 @@ function App() {
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
+
+  //sync the playRequest state with the media playing state:
+  //(eg. because we've used the Youtube controls to play the media instead of our play button)
+  useEffect(() => {
+    if (!playlisterData) return;
+    setPlayRequest(playlisterData.playing);
+  }, [playlisterData]);
 
   const handleFeedback = (data) => {
     console.log("APP / FEEDBACK RECEIVED",data);
