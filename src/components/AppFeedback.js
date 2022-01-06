@@ -4,7 +4,6 @@ import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
-  const urls = props.urls || [];
   const playlisterData = props.playlisterData;
 
   const SourceFeedback = props => {
@@ -107,14 +106,10 @@ content
   return(
     <>
       {
-        playlisterData &&
+        playlisterData?.playlist &&
         <ul>
         {
-          urls.map((url,index) => {
-
-            const track = playlisterData.playlist.find(function(track) {
-              return ( track.index === index );
-            });
+          playlisterData.playlist.map((track,index) => {
 
             const isCurrent = track.current;
 

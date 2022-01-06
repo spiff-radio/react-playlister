@@ -1,6 +1,4 @@
 import React from "react";
-import classNames from "classnames";
-import { Label } from 'semantic-ui-react';
 
 export const AppControls = props => {
 

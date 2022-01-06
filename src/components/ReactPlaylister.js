@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
-import classNames from "classnames";
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
 const REACTPLAYER_PROVIDERS = reactplayerProviders;
@@ -50,7 +49,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //are we currently skipping ?
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
-  const [indices,setIndices] = useState();
   const [playlist,setPlaylist] = useState();//our (transformed) datas
 
   const [controls,setControls] = useState({
@@ -353,13 +351,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipSource(false);
   }
 
-  const getTrackByIndex = (index) => {
-    if (!playlist) return;
-    return playlist.find(function(track) {
-      return ( track.index === index );
-    });
-  }
-
   //get a track based on a source item
   const getSourceTrack = (source) => {
     return playlist.find(function(track) {
@@ -536,13 +527,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     );
 
+    console.log("REACTPLAYLISTER / INIT PLAYLIST",newPlaylist);
+
     setPlaylist(newPlaylist);
 
   }, [props.urls]);
-
-  useEffect(() => {
-    console.log("PLAYLIST UPDATED",playlist);
-  }, [playlist]);
 
   //set default indices from props (if any)
   //TOUFIX URGENT
@@ -553,17 +542,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const propIndices = Array.isArray(props.index) ? props.index : [props.index];//force array
     if (propIndices[0] === undefined) return;
 
-    //compare against previous state and eventually abord
-    if (indices){
-      if( JSON.stringify(propIndices)===JSON.stringify(indices) ) return;
-    }
-
     const trackIndex = propIndices[0] ?? undefined;
     const sourceIndex = propIndices[1] ?? undefined;
     const track = playlist[trackIndex] ?? undefined;
     const source = track.sources[sourceIndex] ?? undefined;
 
-    DEBUG && console.log("REACTPLAYLISTER / SET TRACK & SOURCE FROM PROP",propIndices,track,source);
+    DEBUG && console.log("REACTPLAYLISTER / INIT TRACK & SOURCE FROM PROP INDEX",propIndices,track,source);
 
     setPair({
       track:track,
@@ -602,9 +586,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //first available source
     const firstSource = getNextSource(pair.track);
 
+    if (!currentSource && !firstSource) return; //abord
+
     //so source selected is...
     let source = currentSource ? currentSource : firstSource;
-    if (!source) return;//abord
 
     if (source === currentSource){
       DEBUG && console.log("REACTPLAYLISTER / USE LAST SELECTED SOURCE FOR TRACK #"+pair.track.index,currentSource.index);
@@ -613,7 +598,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setPair({
-      track:pair.track,
+      ...pair,
       source:source
     })
 
@@ -794,9 +779,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         },
         nextSource() {
           nextSource();
-        },
-        getTrackByIndex(index){
-          return getTrackByIndex(index);
         },
         getReactPlayer(){
           return reactPlayerRef.current;

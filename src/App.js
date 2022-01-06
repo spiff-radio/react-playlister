@@ -80,9 +80,8 @@ function App() {
           <h3>Input</h3>
           <textarea
           ref={inputRef}
-          >
-          {JSON.stringify(urls,null,2) }
-          </textarea>
+          defaultValue={JSON.stringify(urls,null,2) }
+          />
           <p>
             <button
             onClick={handleUpdateUrls}
