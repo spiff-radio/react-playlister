@@ -50,6 +50,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
+  const [indices,setIndices] = useState();//set playlister pointer on track+source
+  const [hasSetPropIndices,setHasSetPropIndices] = useState(false);
 
   const [controls,setControls] = useState({
     has_previous_track:false,
@@ -65,7 +67,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     track:undefined,
     source:undefined
   });
-  const [source,setSource] = useState();
+
   const [url, setUrl] = useState();//current url
 
   //build a queue of keys based on an array
@@ -427,134 +429,132 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  //build our initial data
-  useEffect(() => {
-
-    //returns true if the track has at least one playable source
-    const hasPlayableSources = track => {
-      return ( track.sources.find(source => source.playable) !== undefined );
-    }
-
-    const sortSourcesByProvider = (a,b) => {
-
-      if (!sortProviders.length) return 0;
-
-      let aProviderKey = sortProviders.indexOf(a.provider?.key);
-      aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortProviders.length; //if key not found, consider at the end
-
-      let bProviderKey = sortProviders.indexOf(b.provider?.key);
-      bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortProviders.length; //if key not found, consider at the end
-
-      return aProviderKey - bProviderKey;
-
-    }
-
-    const sortSourcesByAutoplay = (a,b) =>{
-      return b.autoplay - a.autoplay;
-    }
-
-    const sortSourcesByPlayable = (a,b) =>{
-      return b.playable - a.playable;
-    }
-
-    const makeTrack = (urls,track_index) => {
-
-      urls = [].concat(urls || []);//force array (it might be a single URL string)
-      urls = urls.flat(Infinity);//flatten
-
-      let sources = urls.map(function(url,i) {
-
-        const isSourceProvider = (provider) => {
-          return provider.canPlay(url);
-        }
-
-        const provider = reactplayerProviders.find(isSourceProvider);
-
-        return {
-          index:i,
-          trackIndex:track_index,
-          current:false,
-          playable:ReactPlayer.canPlay(url),
-          url:url,
-          autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
-          provider:provider ? {name:provider.name,key:provider.key} : undefined,
-        }
-      });
-
-      //sort sources
-      /*
-      sources = sources.sort(sortSourcesByPlayable);
-      sources = sources.sort(sortSourcesByAutoplay);
-      if (sortProviders){
-        sources = sources.sort(sortSourcesByProvider);
-      }
-      */
-
-
-      let track = {
-        sources:sources
-      }
-
-      //set default source
-      const currentSource = getNextSource(track);
-      sources = track.sources.map(
-        (item) => {
-          return {
-            ...item,
-            current:(item === currentSource)
-          }
-        }
-      )
-
-
-      track = {
-        ...track,
-        index:track_index,
-        current:false,
-        playable: hasPlayableSources(track),
-        sources:sources,
-      }
-
-      return track;
-
-    }
-
-    const urls = [].concat(props.urls || []);//force array
-
-    const newPlaylist = urls.map(
-      (v, i) => {
-        return makeTrack(v,i)
-      }
-    );
-
-    console.log("REACTPLAYLISTER / INIT PLAYLIST",newPlaylist);
-
-    setPlaylist(newPlaylist);
-
-  }, [props.urls]);
-
   //set default indices from props (if any)
-  //TOUFIX URGENT
   useEffect(() => {
-
-    if (!playlist) return;
 
     const propIndices = Array.isArray(props.index) ? props.index : [props.index];//force array
+
     if (propIndices[0] === undefined) return;
+    if (JSON.stringify(propIndices) === JSON.stringify(indices)) return;//same as previously
+
+    setHasSetPropIndices(false);
 
     const trackIndex = propIndices[0] ?? undefined;
     const sourceIndex = propIndices[1] ?? undefined;
-    const track = playlist[trackIndex] ?? undefined;
-    const source = track.sources[sourceIndex] ?? undefined;
 
-    DEBUG && console.log("REACTPLAYLISTER / INIT TRACK & SOURCE FROM PROP INDEX",propIndices,track,source);
-
-    setPair({
-      track:track,
-      source:source
-    })
+    setIndices([trackIndex,sourceIndex]);
 
   }, [props.index]);
+
+  //build our initial data
+  useEffect(() => {
+    console.log("REACTPLAYLISTER / INIT PLAYLIST FROM URLS");
+
+    //build a clean playlist based on an array of URLs
+    const buildPlaylist = (urls) => {
+
+      //returns true if the track has at least one playable source
+      const hasPlayableSources = track => {
+        return ( track.sources.find(source => source.playable) !== undefined );
+      }
+
+      const sortSourcesByProvider = (a,b) => {
+
+        if (!sortProviders.length) return 0;
+
+        let aProviderKey = sortProviders.indexOf(a.provider?.key);
+        aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortProviders.length; //if key not found, consider at the end
+
+        let bProviderKey = sortProviders.indexOf(b.provider?.key);
+        bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortProviders.length; //if key not found, consider at the end
+
+        return aProviderKey - bProviderKey;
+
+      }
+
+      const sortSourcesByAutoplay = (a,b) =>{
+        return b.autoplay - a.autoplay;
+      }
+
+      const sortSourcesByPlayable = (a,b) =>{
+        return b.playable - a.playable;
+      }
+
+      const makeTrack = (urls,track_index) => {
+
+        urls = [].concat(urls || []);//force array (it might be a single URL string)
+        urls = urls.flat(Infinity);//flatten
+
+        let sources = urls.map(function(url,i) {
+
+          const isSourceProvider = (provider) => {
+            return provider.canPlay(url);
+          }
+
+          const provider = reactplayerProviders.find(isSourceProvider);
+
+          return {
+            index:i,
+            trackIndex:track_index,
+            current:false,
+            playable:ReactPlayer.canPlay(url),
+            url:url,
+            autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
+            provider:provider ? {name:provider.name,key:provider.key} : undefined,
+          }
+        });
+
+        //sort sources
+        /*
+        sources = sources.sort(sortSourcesByPlayable);
+        sources = sources.sort(sortSourcesByAutoplay);
+        if (sortProviders){
+          sources = sources.sort(sortSourcesByProvider);
+        }
+        */
+
+
+        let track = {
+          sources:sources
+        }
+
+        //set default source
+        const currentSource = getNextSource(track);
+        sources = track.sources.map(
+          (item) => {
+            return {
+              ...item,
+              current:(item === currentSource)
+            }
+          }
+        )
+
+
+        track = {
+          ...track,
+          index:track_index,
+          current:false,
+          playable: hasPlayableSources(track),
+          sources:sources,
+        }
+
+        return track;
+
+      }
+
+      urls = [].concat(urls || []);//force array
+
+      return urls.map(
+        (v, i) => {
+          return makeTrack(v,i)
+        }
+      );
+    }
+
+    const newPlaylist = buildPlaylist(props.urls);
+    setPlaylist(newPlaylist);
+
+  }, [props.urls]);
 
   //if track is not defined, use the first one available.
   useEffect(() => {
@@ -603,6 +603,31 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
   }, [playlist,pair]);
+
+  //if we had some prop indices set;
+  //assign them now (and ensure this hook runs only once)
+  useEffect(() => {
+
+    if (!indices) return;
+    if (!playlist) return;
+    if (hasSetPropIndices) return;
+
+    const trackIndex = indices[0];
+    const sourceIndex = indices[1];
+
+    const track = playlist[trackIndex] ?? undefined;
+    const source = track.sources[sourceIndex] ?? undefined;
+
+    DEBUG && console.log("REACTPLAYLISTER / INIT TRACK & SOURCE FROM PROP INDICES",indices,track,source);
+
+    setPair({
+      track:track,
+      source:source
+    })
+
+    setHasSetPropIndices(true);
+
+  }, [indices,playlist]);
 
   //update previous/next controls
   useEffect(() => {
@@ -698,7 +723,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         DEBUG && console.log("REACTPLAYLISTER / NO SOURCES FOR PLAYING TRACK, SKIP IT",track);
         skipTrack();
       }
-      return;
     }
 
     /*
@@ -706,19 +730,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     */
 
     const source = pair.source;
-    if (!source) return;
+    if (source){
+      if (url !== source.url){
+          setUrl(source.url);
+      }else{
+        //if that source has already played, resets it.
+        const played = reactPlayerRef.current.getCurrentTime();
 
-    if (url !== source.url){
-        setUrl(source.url);
-    }else{
-      //if that source has already played, resets it.
-      const played = reactPlayerRef.current.getCurrentTime();
-
-      if (played){
-        DEBUG && console.log("REACTPLAYLISTER / RESET SOURCE",source);
-        reactPlayerRef.current.seekTo(0);
+        if (played){
+          DEBUG && console.log("REACTPLAYLISTER / RESET SOURCE",source);
+          reactPlayerRef.current.seekTo(0);
+        }
       }
+    }else{
+      setUrl();
     }
+
+
 
   }, [pair]);
 
