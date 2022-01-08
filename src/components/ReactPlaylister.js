@@ -374,7 +374,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       playable:false
     }
 
-    console.log("SET SOURCE #"+source.index+" NOT PLAYABLE");
+    console.log("SET TRACK #"+source.trackIndex+" SOURCE #"+source.index+" NOT PLAYABLE");
 
     updateSource(source,newSource);
 
@@ -387,19 +387,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
     //https://github.com/facebook/react/issues/16858#issuecomment-534257343
     setPlaylist(prevState => {
-
-      const newState =
-        prevState.map(
-          (item) => {
-            if (item.index === track.index){
-              return newTrack;
-            }else{
-              return item;
-            }
+      return prevState.map(
+        (item) => {
+          if (item.index === track.index){
+            return newTrack;
+          }else{
+            return item;
           }
-        )
+        }
+      )
 
-        return newState;
     });
 
   }
@@ -679,6 +676,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const source = pair.source;
 
     if (!track) return;
+
+    console.log("SET 'CURRENT' PROPERTY FOR PAIR",pair);
 
     setPlaylist(
       playlist.map(
