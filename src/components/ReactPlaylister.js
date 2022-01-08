@@ -679,8 +679,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     console.log("SET 'CURRENT' PROPERTY FOR PAIR",pair);
 
-    setPlaylist(
-      playlist.map(
+    setPlaylist(prevState => {
+      return prevState.map(
       (trackItem) => {
 
         const isCurrentTrack = (trackItem.index === track.index);
@@ -706,7 +706,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       }
     )
-  );
+    })
 
   }, [pair]);
 
