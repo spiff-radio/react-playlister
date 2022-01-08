@@ -50,8 +50,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
+  const [unplayableUrls,setUnplayableUrls] = useState();
+  const [hasInitUnplayableUrls,setHasInitUnplayableUrls] = useState(false);
+
   const [indices,setIndices] = useState();//set playlister pointer on track+source
-  const [hasSetPropIndices,setHasSetPropIndices] = useState(false);
+  const [hasInitIndices,setHasInitIndices] = useState(false);
 
   const [controls,setControls] = useState({
     has_previous_track:false,
@@ -208,7 +211,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceError = (e) => {
 
-    setSourceNotPlayable(pair.source);
+    console.log("SOURCE ERROR",pair.source);
+
+    //append to array
+    let ignoreUrls = (unplayableUrls || []).concat(pair.source.url);
+    ignoreUrls = [...new Set(ignoreUrls)];//make unique
+    setUnplayableUrls(ignoreUrls);
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -367,65 +375,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     });
   }
 
-  const setSourceNotPlayable = (source) => {
-
-    const newSource = {
-      ...source,
-      playable:false
-    }
-
-    console.log("SET TRACK #"+source.trackIndex+" SOURCE #"+source.index+" NOT PLAYABLE");
-
-    updateSource(source,newSource);
-
-  }
-
-  const updateTrack = (track,newTrack) => {
-
-    console.log("UPDATE TRACK #"+track.index,newTrack);
-
-    //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
-    //https://github.com/facebook/react/issues/16858#issuecomment-534257343
-    setPlaylist(prevState => {
-      return prevState.map(
-        (item) => {
-          if (item.index === track.index){
-            return newTrack;
-          }else{
-            return item;
-          }
-        }
-      )
-
-    });
-
-  }
-
-  const updateSource = (source,newSource) => {
-
-    console.log("UPDATE SOURCE #"+source.index,newSource);
-
-    const track = getSourceTrack(source);
-
-    const newSources = track.sources.map(
-      (item) => {
-        if (item.index === source.index){
-          return newSource;
-        }else{
-          return item;
-        }
-      }
-    )
-
-    const newTrack = {
-      ...track,
-      sources:newSources
-    }
-
-    updateTrack(track,newTrack);
-
-  }
-
   //set default indices from props (if any)
   useEffect(() => {
 
@@ -434,7 +383,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (propIndices[0] === undefined) return;
     if (JSON.stringify(propIndices) === JSON.stringify(indices)) return;//same as previously
 
-    setHasSetPropIndices(false);
+    setHasInitIndices(false);
 
     const trackIndex = propIndices[0] ?? undefined;
     const sourceIndex = propIndices[1] ?? undefined;
@@ -449,11 +398,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //build a clean playlist based on an array of URLs
     const buildPlaylist = (urls) => {
-
-      //returns true if the track has at least one playable source
-      const hasPlayableSources = track => {
-        return ( track.sources.find(source => source.playable) !== undefined );
-      }
 
       const sortSourcesByProvider = (a,b) => {
 
@@ -494,7 +438,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             index:i,
             trackIndex:track_index,
             current:false,
-            playable:ReactPlayer.canPlay(url),
+            playable:true,//default
             url:url,
             autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
             provider:provider ? {name:provider.name,key:provider.key} : undefined,
@@ -531,7 +475,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           ...track,
           index:track_index,
           current:false,
-          playable: hasPlayableSources(track),
+          playable: true,//default
           sources:sources,
         }
 
@@ -549,7 +493,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     const newPlaylist = buildPlaylist(props.urls);
+
     setPlaylist(newPlaylist);
+
+  }, [props.urls]);
+
+  //set initially not playable URLS
+  useEffect(() => {
+
+    const getUnplayableUrls = (urls) => {
+      urls = urls.flat(Infinity);//flatten
+      urls = [...new Set(urls)];//make unique
+
+      return urls.filter(function(url) {
+        return !ReactPlayer.canPlay(url);
+      });
+
+    }
+
+    const ignoreUrls = getUnplayableUrls(props.urls);
+
+    setUnplayableUrls(ignoreUrls);
 
   }, [props.urls]);
 
@@ -607,7 +571,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!indices) return;
     if (!playlist) return;
-    if (hasSetPropIndices) return;
+    if (hasInitIndices) return;//avoid infinite loop
 
     const trackIndex = indices[0];
     const sourceIndex = indices[1];
@@ -622,7 +586,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       source:source
     })
 
-    setHasSetPropIndices(true);
+    setHasInitIndices(true);
 
   }, [indices,playlist]);
 
@@ -669,6 +633,50 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [pair,loop,autoskip]);
 
+  //update the 'playable' properties for tracks and sources
+  useEffect(() => {
+
+    if (!playlist) return;
+    if (!unplayableUrls) return;
+
+    console.log("***SET 'PLAYABLE' PROPERTIES BY IGNORING URLS",unplayableUrls);
+
+    setPlaylist(prevState => {
+
+      const newPlaylist = prevState.map(
+      (trackItem) => {
+
+        const getUpdatedSources = (track) => {
+          return track.sources.map(
+            (sourceItem) => {
+              return {
+                ...sourceItem,
+                playable:!unplayableUrls.includes(sourceItem.url)
+              }
+            }
+          )
+        }
+
+        const updatedSources = getUpdatedSources(trackItem);
+
+        const playableSources = updatedSources.filter(function(source) {
+          return source.playable;
+        });
+        const hasPlayableSources = (playableSources.length > 0);
+
+        return {
+          ...trackItem,
+          playable:hasPlayableSources,
+          sources:updatedSources
+        }
+      }
+    );
+
+    return newPlaylist
+    });
+
+  }, [unplayableUrls]);
+
   //update the 'current' properties for tracks and sources
   useEffect(() => {
 
@@ -679,8 +687,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     console.log("SET 'CURRENT' PROPERTY FOR PAIR",pair);
 
-    setPlaylist(
-      playlist.map(
+    setPlaylist(prevState => {
+      const newPlaylist = prevState.map(
       (trackItem) => {
 
         const isCurrentTrack = (trackItem.index === track.index);
@@ -706,6 +714,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       }
     )
+      return newPlaylist;
+    }
   );
 
   }, [pair]);
