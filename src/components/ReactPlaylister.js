@@ -418,14 +418,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         });
 
         //sort sources
-        /*
         sources = sources.sort(sortSourcesByPlayable);
         sources = sources.sort(sortSourcesByAutoplay);
         if (sortProviders){
           sources = sources.sort(sortSourcesByProvider);
         }
-        */
-        
+
         let track = {
           sources:sources
         }
