@@ -396,6 +396,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     console.log("REACTPLAYLISTER / INIT PLAYLIST FROM URLS");
 
+    setHasInitIndices(false);
+
+    /*
+    Build Playlist
+    */
+
     //build a clean playlist based on an array of URLs
     const buildPlaylist = (urls) => {
 
@@ -496,10 +502,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setPlaylist(newPlaylist);
 
-  }, [props.urls]);
-
-  //set initially not playable URLS
-  useEffect(() => {
+    /*
+    Get non playable URLS
+    */
 
     const getUnplayableUrls = (urls) => {
       urls = urls.flat(Infinity);//flatten
@@ -762,6 +767,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //warn parent that data has been updated
   useEffect(() => {
     if (!playlist) return;
+    if (!controls) return;
     if (typeof props.onFeedback === 'function') {
 
       const output = {
@@ -770,7 +776,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
       props.onFeedback(output);
     }
-  }, [controls]);
+  }, [controls,playlist]);
 
   //when play is requested, set loading until media is playing
   useEffect(() => {
