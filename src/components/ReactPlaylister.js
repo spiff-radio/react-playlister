@@ -771,7 +771,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setControls(prevState => {
       return{
         ...prevState,
-        playLoading:prevState.playing ? false : prevState.playLoading ? true : playRequest
+        playLoading:prevState.playLoading ? prevState.playing : (playRequest && !prevState.playing)
       }
     })
   }, [playRequest]);
