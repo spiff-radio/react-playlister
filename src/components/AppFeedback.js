@@ -4,7 +4,7 @@ import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
-  const playlisterData = props.playlisterData;
+  const playlist = props.playlist;
 
   const SourceFeedback = props => {
 
@@ -106,10 +106,10 @@ content
   return(
     <>
       {
-        playlisterData?.playlist &&
+        playlist &&
         <ul>
         {
-          playlisterData.playlist.map((track,index) => {
+          playlist.map((track,index) => {
 
             const isCurrent = track.current;
 

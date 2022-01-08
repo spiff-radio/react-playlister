@@ -2,11 +2,12 @@ import React from "react";
 
 export const AppControls = props => {
 
-  const playlisterData = props.playlisterData;
+  const playlist = props.playlist;
+  const controls = props.controls;
   const playlisterRef = props.playlister;
 
   //get current track & source
-  const track = playlisterData?.playlist.find(function(track) {
+  const track = playlist?.find(function(track) {
     return track.current;
   });
 
@@ -17,10 +18,10 @@ export const AppControls = props => {
   const trackIndex = track?.index;
   const sourceIndex = source?.index;
 
-  const hasPreviousTrack = playlisterData?.has_previous_track;
-  const hasNextTrack = playlisterData?.has_next_track;
-  const hasPreviousSource = playlisterData?.has_previous_source;
-  const hasNextSource = playlisterData?.has_next_source;
+  const hasPreviousTrack = controls?.has_previous_track;
+  const hasNextTrack = controls?.has_next_track;
+  const hasPreviousSource = controls?.has_previous_source;
+  const hasNextSource = controls?.has_next_source;
 
   const handleLoop = (bool) => {
     if (typeof props.onToggleLoop === 'function') {
@@ -57,7 +58,7 @@ export const AppControls = props => {
     <div id="controls">
       <>
       {
-        playlisterData &&
+        controls &&
         <>
           <p>
             <strong>track #{trackIndex}</strong>
@@ -86,15 +87,15 @@ export const AppControls = props => {
           <p>
             <strong>playing</strong>
             {
-              (playlisterData.playLoading || playlisterData.mediaLoading) ?
+              (controls.playLoading || controls.mediaLoading) ?
               <span>...</span>
               :
-              <span>{playlisterData.playing ? 'true' : 'false'}</span>
+              <span>{controls.playing ? 'true' : 'false'}</span>
             }
 
             &nbsp;
             <button
-            onClick={(e) => handlePlay(!playlisterData.playing)}
+            onClick={(e) => handlePlay(!controls.playing)}
             >toggle</button>
           </p>
 
