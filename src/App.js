@@ -139,6 +139,7 @@ function App() {
       //if your input is two-levels; either the track index OR the [track index, source index]
       index={index}
       loop={loop}
+      shuffle={shuffle}
       autoskip={autoskip}
       disabledProviders={['soundcloud']}
 
