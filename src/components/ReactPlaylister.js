@@ -138,18 +138,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return true;
   }
 
-  const getTracksQueue = (playlist,track,loop,backwards) => {
+  const getTracksQueue = (track,loop,backwards) => {
     let queue = getArrayQueue(playlist,track,loop,backwards);
 
     if (autoskip){
       //filter only playable tracks
       queue = queue.filter(filterTrack);
     }
+
     return queue;
   }
 
-  const getNextTrack = (playlist,track,loop,backwards) => {
-    const queue = getTracksQueue(playlist,track,loop,backwards);
+  const getNextTrack = (track,loop,backwards) => {
+    const queue = getTracksQueue(track,loop,backwards);
     return queue[0];
   }
 
@@ -234,7 +235,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     const track = pair.track;
-    const queue = getTracksQueue(playlist,undefined,false,false);
+    const queue = getTracksQueue(undefined,false,false);
     const lastTrack = queue[queue.length - 1];
 
     if ( (track === lastTrack) ) { //tell parent the last played track has ended
@@ -293,7 +294,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
-    const newTrack = getNextTrack(playlist,pair.track,loop,goBackwards);
+    const newTrack = getNextTrack(pair.track,loop,goBackwards);
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+pair.track.index+backwardsMsg,newTrack.index);
 
@@ -424,8 +425,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           sources = sources.sort(sortSourcesByProvider);
         }
         */
-
-
+        
         let track = {
           sources:sources
         }
@@ -534,7 +534,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if ( !hasInitPlaylist ) return;
     if ( pair.track ) return;//run this hook only if we don't have a track yet
 
-    const firstTrack = getNextTrack(playlist);
+    const firstTrack = getNextTrack();
     if (!firstTrack) return;//abord
 
     DEBUG && console.log("REACTPLAYLISTER / SET DEFAULT TRACK",firstTrack);
@@ -720,8 +720,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    const previousTracksQueue = getTracksQueue(playlist,track,loop,true);
-    const nextTracksQueue = getTracksQueue(playlist,track,loop,false);
+    const previousTracksQueue = getTracksQueue(track,loop,true);
+    const nextTracksQueue = getTracksQueue(track,loop,false);
 
     appendControls = {
       ...appendControls,
