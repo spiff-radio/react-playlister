@@ -36,8 +36,8 @@ export const AppControls = props => {
   }
 
   const handleShuffle = (bool) => {
-    if (typeof props.onToggleSHuffle === 'function') {
-      props.onToggleSHuffle(bool);
+    if (typeof props.onToggleShuffle === 'function') {
+      props.onToggleShuffle(bool);
     }
   }
 
