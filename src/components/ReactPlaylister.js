@@ -197,7 +197,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = pair.track;
     const source = pair.source;
 
-    console.log("REACTPLAYLISTER / SOURCE #"+source.index+" READY FOR TRACK #"+track.index,source.url);
+    console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" LOADED",source.url);
 
     //inherit React Player prop
     if (typeof props.onReady === 'function') {
@@ -374,7 +374,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       playable:false
     }
 
-    console.log("SET SOURCE NOT PLAYABLE",source);
+    console.log("SET SOURCE #"+source.index+" NOT PLAYABLE");
 
     updateSource(source,newSource);
 
@@ -382,7 +382,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const updateTrack = (track,newTrack) => {
 
-    console.log("UPDATE TRACK FROM > TO",track,newTrack);
+    console.log("UPDATE TRACK #"+track.index,newTrack);
 
     //update playlist track; and use prevState to ensure value is not overriden; because we set this state asynchronously
     //https://github.com/facebook/react/issues/16858#issuecomment-534257343
@@ -390,11 +390,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       const newState =
         prevState.map(
-          (playlistTrack) => {
-            if (playlistTrack === track){
+          (item) => {
+            if (item.index === track.index){
               return newTrack;
             }else{
-              return playlistTrack;
+              return item;
             }
           }
         )
@@ -406,13 +406,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const updateSource = (source,newSource) => {
 
-    console.log("UPDATE SOURCE FROM > TO",source,newSource);
+    console.log("UPDATE SOURCE #"+source.index,newSource);
 
     const track = getSourceTrack(source);
 
     const newSources = track.sources.map(
       (item) => {
-        if (item === source){
+        if (item.index === source.index){
           return newSource;
         }else{
           return item;
@@ -750,6 +750,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [pair]);
 
+  //warn parent that data has been updated
+  useEffect(() => {
+    if (!playlist) return;
+    if (typeof props.onFeedback === 'function') {
+
+      const output = {
+        ...controls,
+        playlist:playlist
+      }
+      props.onFeedback(output);
+    }
+  }, [controls]);
+
   //when play is requested, set loading until media is playing
   useEffect(() => {
     setControls(prevState => {
@@ -769,19 +782,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
     })
   }, [url]);
-
-  //warn parent that data has been updated
-  useEffect(() => {
-    if (!playlist) return;
-    if (typeof props.onFeedback === 'function') {
-
-      const output = {
-        ...controls,
-        playlist:playlist
-      }
-      props.onFeedback(output);
-    }
-  }, [controls]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
