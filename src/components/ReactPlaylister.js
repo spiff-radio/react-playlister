@@ -49,6 +49,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
   const [hasInitPlaylist,setHasInitPlaylist] = useState(false);
+  const [trackHistory,setTrackHistory] = useState([]);
 
   const [unplayableUrls,setUnplayableUrls] = useState();
 
@@ -685,6 +686,28 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return newPlaylist;
     }
   );
+
+  }, [pair]);
+
+  //update tracks history
+  //TOUFIX TOUCHECK
+  
+  useEffect(() => {
+
+    const track = pair.track;
+    const source = pair.source;
+    if (!track || !source) return;
+
+    const trackIndex = track.index;
+
+    const lastItem = trackHistory[trackHistory.length - 1];
+    if (lastItem === trackIndex) return;
+
+    const newHistory = [...trackHistory, trackIndex];
+
+    console.log("REACTPLAYLISTER / UPDATE TRACKS HISTORY",newHistory);
+
+    setTrackHistory(newHistory)
 
   }, [pair]);
 
