@@ -649,7 +649,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (!playlist) return;
     if (!hasInitPlaylist) return;
 
-    console.log("SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",urlCollection);
+    DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",urlCollection);
 
     setPlaylist(prevState => {
 
@@ -705,7 +705,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!track) return;
 
-    console.log("SET 'CURRENT' PROPERTY FOR PAIR",pair);
+    DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY FOR PAIR",pair);
 
     setPlaylist(prevState => {
       const newPlaylist = prevState.map(
@@ -769,8 +769,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //this track has no sources
     if (!track.sources.length){
+      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" HAS NO SOURCES...");
       if (playRequest && skipNoSources){
-        DEBUG && console.log("REACTPLAYLISTER / NO SOURCES FOR PLAYING TRACK, SKIP IT",track);
+        DEBUG && console.log("REACTPLAYLISTER / ...THUS SKIP IT");
         skipTrack();
       }
     }
