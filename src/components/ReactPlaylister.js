@@ -271,6 +271,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onEnded();
     }
 
+    if (typeof props.onSourceEnded === 'function') {
+      props.onSourceEnded(pair.source);
+    }
+
     const track = pair.track;
     const queue = getTracksQueue(undefined,false,false);
     const lastTrack = queue[queue.length - 1];
