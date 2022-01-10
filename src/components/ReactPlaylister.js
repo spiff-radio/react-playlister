@@ -341,8 +341,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         track:newTrack,
         source:undefined
       })
-    }else{ //no playable tracks
-      DEBUG && console.log("REACTPLAYLISTER / NO NEXT PLAYABLE TRACKS");
+    }else{ //no more playable tracks
       handlePlaylistEnded();
     }
   }
@@ -563,7 +562,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const sourceIndex = propIndices[1] ?? undefined;
 
     const track = playlist[trackIndex] ?? undefined;
-    const source = track.sources[sourceIndex] ?? undefined;
+    const source = track?.sources[sourceIndex] ?? undefined;
 
     DEBUG && console.log("REACTPLAYLISTER / INIT TRACK & SOURCE FROM PROP INDICES",[trackIndex,sourceIndex]);
 
@@ -644,6 +643,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
               const url = sourceItem.url;
               const urlCollectionItem = urlCollection[url];
+
+              if (!urlCollectionItem) return sourceItem;
+
               const urlPlayable = urlCollectionItem.playable;
               const urlError = urlCollectionItem.error;
 
