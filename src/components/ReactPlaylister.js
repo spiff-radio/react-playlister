@@ -318,6 +318,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
+  const handleSourceDuration = duration => {
+
+    //inherit React Player prop
+    if (typeof props.onDuration === 'function') {
+      props.onDuration(duration);
+    }
+
+    const source = pair.source;
+    source.duration = duration * 1000; //in ms
+
+    //TOUFIX TOUCHECK should we update the track duration too ?
+
+  }
+
   const handlePlaylistEnded = () => {
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST ENDED");
     if(typeof props.onPlaylistEnded === 'function'){
@@ -466,6 +480,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
               error:undefined,
               autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
               provider:provider ? {name:provider.name,key:provider.key} : undefined,
+              duration:undefined
             }
           });
 
@@ -926,12 +941,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       onEnded={handleSourceEnded}
       onPlay={handleSourcePlay}
       onPause={handleSourcePause}
+      onDuration={handleSourceDuration}
 
       //inherit methods
       onStart={props.onStart}
       onBuffer={props.onBuffer}
       onBufferEnd={props.onBufferEnd}
-      onDuration={props.onDuration}
       onSeek={props.onSeek}
       onProgress={props.onProgress}
       onClickPreview={props.onClickPreview}
