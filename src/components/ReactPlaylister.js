@@ -652,7 +652,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",urlCollection);
 
     setPlaylist(prevState => {
-      return revState.map(
+      return prevState.map(
       (trackItem) => {
 
         const getUpdatedSources = (track) => {
