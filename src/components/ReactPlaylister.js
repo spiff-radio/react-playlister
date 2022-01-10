@@ -409,68 +409,79 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //build a clean playlist based on an array of URLs
     const buildPlaylist = (urls) => {
 
-      const sortSourcesByProvider = (a,b) => {
+      const buildTrack = (urls,track_index) => {
 
-        if (!sortProviders.length) return 0;
-
-        let aProviderKey = sortProviders.indexOf(a.provider?.key);
-        aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortProviders.length; //if key not found, consider at the end
-
-        let bProviderKey = sortProviders.indexOf(b.provider?.key);
-        bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortProviders.length; //if key not found, consider at the end
-
-        return aProviderKey - bProviderKey;
-
-      }
-
-      const sortSourcesByAutoplay = (a,b) =>{
-        return b.autoplay - a.autoplay;
-      }
-
-      const sortSourcesByPlayable = (a,b) =>{
-        return b.playable - a.playable;
-      }
-
-      const makeTrack = (urls,track_index) => {
-
-        urls = [].concat(urls || []);//force array (it might be a single URL string)
-        urls = urls.flat(Infinity);//flatten
-
-        let sources = urls.map(function(url,i) {
-
-          const isSourceProvider = (provider) => {
-            return provider.canPlay(url);
-          }
-
-          const provider = reactplayerProviders.find(isSourceProvider);
-
-          return {
-            index:i,
-            trackIndex:track_index,
-            current:false,
-            playable:true,//default
-            url:url,
-            error:undefined,
-            autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
-            provider:provider ? {name:provider.name,key:provider.key} : undefined,
-          }
-        });
-
-        //sort sources
-
-        sources = sources.sort(sortSourcesByPlayable);
-        sources = sources.sort(sortSourcesByAutoplay);
-        if (sortProviders){
-          sources = sources.sort(sortSourcesByProvider);
-        }
-
+        //defaults
         let track = {
-          sources:sources
+          index:track_index,
+          current:undefined,
+          playable:undefined,
+          sources:[]
         }
+
+        const buildTrackSources = (index,urls) => {
+
+          const sortSourcesByProvider = (a,b) => {
+
+            if (!sortProviders.length) return 0;
+
+            let aProviderKey = sortProviders.indexOf(a.provider?.key);
+            aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortProviders.length; //if key not found, consider at the end
+
+            let bProviderKey = sortProviders.indexOf(b.provider?.key);
+            bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortProviders.length; //if key not found, consider at the end
+
+            return aProviderKey - bProviderKey;
+
+          }
+
+          const sortSourcesByAutoplay = (a,b) =>{
+            return b.autoplay - a.autoplay;
+          }
+
+          const sortSourcesByPlayable = (a,b) =>{
+            return b.playable - a.playable;
+          }
+
+          urls = [].concat(urls || []);//force array (it might be a single URL string)
+          urls = urls.flat(Infinity);//flatten
+
+          let sources = urls.map(function(url,i) {
+
+            const isSourceProvider = (provider) => {
+              return provider.canPlay(url);
+            }
+
+            const provider = reactplayerProviders.find(isSourceProvider);
+
+            return {
+              index:i,
+              trackIndex:index,
+              current:false,
+              playable:true,//default
+              url:url,
+              error:undefined,
+              autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
+              provider:provider ? {name:provider.name,key:provider.key} : undefined,
+            }
+          });
+
+          //sort sources
+
+          sources = sources.sort(sortSourcesByPlayable);
+          sources = sources.sort(sortSourcesByAutoplay);
+          if (sortProviders){
+            sources = sources.sort(sortSourcesByProvider);
+          }
+
+          return sources
+        }
+
+        track.sources = buildTrackSources(track_index,urls);
 
         //set default source
         const currentSource = getNextSource(track);
-        sources = track.sources.map(
+        track.sources = track.sources.map(
           (item) => {
             return {
               ...item,
@@ -478,15 +489,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             }
           }
         )
-
-
-        track = {
-          ...track,
-          index:track_index,
-          current:false,
-          playable: true,//default
-          sources:sources,
-        }
 
         return track;
 
@@ -496,7 +498,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       return urls.map(
         (v, i) => {
-          return makeTrack(v,i)
+          return buildTrack(v,i)
         }
       );
     }
