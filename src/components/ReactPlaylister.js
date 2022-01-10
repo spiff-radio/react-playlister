@@ -128,6 +128,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       let bool = track.playable;
 
       //here's a chance to filter the playable tracks if you have a very specific need for it.
+      //(for instance, you might want to resolve a promise in a parent component)
       if (typeof props.filterPlayableTrack === 'function') {
         const trackIndex = playlist.indexOf(track);
         bool = props.filterPlayableTrack(track,trackIndex,bool);
@@ -230,6 +231,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (typeof props.onReady === 'function') {
       props.onReady(player);
     }
+
+    //TOUFIX
+    //allow to filter track & source using a fn prop ?
 
   }
 

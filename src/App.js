@@ -25,6 +25,7 @@ function App() {
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
       'https://www.notplayable.com',
       'https://www.youtube.com/watch?v=v3RTs0LCc-8',
+      'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     'https://www.notplayable.com',
     'https://www.notplayable.com',
