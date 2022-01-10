@@ -652,8 +652,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",urlCollection);
 
     setPlaylist(prevState => {
-
-      const newPlaylist = prevState.map(
+      return revState.map(
       (trackItem) => {
 
         const getUpdatedSources = (track) => {
@@ -691,8 +690,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       }
     );
-
-    return newPlaylist
     });
 
   }, [urlCollection]);
@@ -708,7 +705,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY FOR PAIR",pair);
 
     setPlaylist(prevState => {
-      const newPlaylist = prevState.map(
+      return prevState.map(
       (trackItem) => {
 
         const isCurrentTrack = (trackItem.index === track.index);
@@ -733,8 +730,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
         }
       }
-    )
-      return newPlaylist;
+    );
     }
   );
 
