@@ -515,8 +515,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (!playlist) return;
     if (hasInitPlaylist) return;//avoid infinite loop
 
-    let ignoreUrls = [];
-
     let collection = {};
 
     playlist.forEach(function(track){
@@ -530,8 +528,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           error:supported ? undefined : 'Not supported by ReactPlayer'
         }
 
-        if ( ReactPlayer.canPlay(source.url) ) return;//continue
-        ignoreUrls.push(source.url);
       });
     });
 
