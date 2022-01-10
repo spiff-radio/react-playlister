@@ -27,8 +27,10 @@ Callback props take a function that gets fired on various events:
 
 Prop | Description
 ---- | -----------
-`onFeedback` | Called when the playlist has some useful data to give; as an object.
-`onPlaylistEnded` | Called when the last playable track of the playlist has ended.
+`onSourceEnded` | Called a source has finished playing.
+`onPlaylistEnded` | Called when the last track of the playlist has finished playing.
+`onPlaylistUpdated` | Called when the playlist data has been updated.
+`onControlsUpdated` | Called when the playlist controls have been updated.
 `filterPlayableTrack` | *You probably don't need this; use it only if you're sure of what you're doing!*<br/> Allows you to filter the *playable* property of a track.
 
 ##### Example of a function used with *filterPlayableTrack*

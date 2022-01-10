@@ -25,6 +25,7 @@ function App() {
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
       'https://www.notplayable.com',
       'https://www.youtube.com/watch?v=v3RTs0LCc-8',
+      'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     'https://www.notplayable.com',
     'https://www.notplayable.com',
@@ -34,7 +35,8 @@ function App() {
   ]);
 
   const [index,setIndex] = useState([3,1]);
-  const [playlisterData, setPlaylisterData] = useState();
+  const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
+  const [playlisterControls, setPlaylisterControls] = useState();
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
@@ -44,13 +46,18 @@ function App() {
   //sync the playRequest state with the media playing state:
   //(eg. because we've used the Youtube controls to play the media instead of our play button)
   useEffect(() => {
-    if (!playlisterData) return;
-    setPlayRequest(playlisterData.playing);
-  }, [playlisterData]);
+    if (!playlisterControls) return;
+    setPlayRequest(playlisterControls.playing);
+  }, [playlisterControls]);
 
-  const handleFeedback = (data) => {
-    console.log("APP / FEEDBACK RECEIVED",data);
-    setPlaylisterData(data);
+  const handlePlaylistUpdated = (playlist) => {
+    console.log("APP / PLAYLIST UPDATED",playlist);
+    setPlaylisterPlaylist(playlist);
+  }
+
+  const handleControlsUpdated = (controls) => {
+    console.log("APP / CONTROLS UPDATED",controls);
+    setPlaylisterControls(controls);
   }
 
   const handlePlaylistEnded = () => {
@@ -99,14 +106,16 @@ function App() {
           <h3>Feedback</h3>
           <AppFeedback
           urls={urls}
-          playlisterData={playlisterData}
+          playlist={playlisterPlaylist}
+          controls={playlisterControls}
           onSelect={handleSourceSelect}
           />
         </div>
       </div>
       <AppControls
       playlister={playlisterRef}
-      playlisterData={playlisterData}
+      playlist={playlisterPlaylist}
+      controls={playlisterControls}
       loop={loop}
       shuffle={shuffle}
       autoskip={autoskip}
@@ -131,6 +140,7 @@ function App() {
       //if your input is two-levels; either the track index OR the [track index, source index]
       index={index}
       loop={loop}
+      shuffle={shuffle}
       autoskip={autoskip}
       disabledProviders={['soundcloud']}
 
@@ -162,7 +172,8 @@ function App() {
       /*
       Callback props
       */
-      onFeedback={handleFeedback}
+      onControlsUpdated={handleControlsUpdated}
+      onPlaylistUpdated={handlePlaylistUpdated}
       onPlaylistEnded={handlePlaylistEnded}
       /*
       ReactPlayer callback props

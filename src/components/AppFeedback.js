@@ -4,9 +4,11 @@ import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
-  const playlisterData = props.playlisterData;
+  const playlist = props.playlist;
 
   const SourceFeedback = props => {
+
+    const source = props.data;
 
     const handleSourceSelect = (e) => {
       if (typeof props.onSelect === 'function') {
@@ -19,21 +21,21 @@ export const AppFeedback = props => {
       onClick={handleSourceSelect}
       >
         <Label>
-        #{props.index}
+        #{source.index}
         </Label>
 
-        <span>{props.url}</span>
+        <span>{source.url}</span>
         {
-          props.provider &&
-          <Label color="teal">{props.provider.name}</Label>
+          source.provider &&
+          <Label color="teal">{source.provider.name}</Label>
         }
         {
-          !props.autoplay &&
+          !source.autoplay &&
           <Label color="orange">no autoplay</Label>
         }
         {
-          !props.playable &&
-          <Label color="red">not playable</Label>
+          !source.playable &&
+          <Label color="red" title={source.error}>not playable</Label>
         }
         {
           props.selected &&
@@ -80,15 +82,11 @@ export const AppFeedback = props => {
               }
               >
                 <SourceFeedback
-                url={source.url}
-                index={source.index}
-                autoplay={source.autoplay}
-                track_index={props.track_index}
                 source_index={sourceKey}
-                provider={source.provider}
-                selected={isSelected}
-                playable={source.playable}
+                track_index={props.track_index}
                 onSelect={props.onSelect}
+                selected={isSelected}
+                data={source}
                 />
               </li>
             )
@@ -106,10 +104,10 @@ content
   return(
     <>
       {
-        playlisterData?.playlist &&
+        playlist &&
         <ul>
         {
-          playlisterData.playlist.map((track,index) => {
+          playlist.map((track,index) => {
 
             const isCurrent = track.current;
 
