@@ -48,10 +48,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
+
+  //object containing each playlist URL (as properties);
+  //with its playable / error status
+  //this way, even if an URL is used multiple times, those properties will be shared.
+  const [urlCollection,setUrlCollection] = useState([]);
+
   const [hasInitPlaylist,setHasInitPlaylist] = useState(false);
   const [trackHistory,setTrackHistory] = useState([]);
-
-  const [unplayableUrls,setUnplayableUrls] = useState();
 
   const [controls,setControls] = useState({
     has_previous_track:false,
@@ -231,12 +235,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceError = (e) => {
 
-    console.log("SOURCE ERROR",pair.source);
+    const sourceUrl = pair.source.url;
 
-    //append to array
-    let ignoreUrls = (unplayableUrls || []).concat(pair.source.url);
-    ignoreUrls = [...new Set(ignoreUrls)];//make unique
-    setUnplayableUrls(ignoreUrls);
+    console.log("REACTPLAYLISTER / ERROR PLAYING MEDIA",pair.source.url);
+
+    setUrlCollection({
+      ...urlCollection,
+      [sourceUrl]:{
+        ...urlCollection[sourceUrl],
+        error:'Error while playing media',
+        playable:false
+      }
+    })
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -319,15 +329,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const newTrack = getNextTrack(pair.track,loop,goBackwards);
 
-    DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+pair.track.index+backwardsMsg,newTrack.index);
+    if (newTrack){
 
-    if (newTrack !== undefined){
+      DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+pair.track.index+backwardsMsg,newTrack.index);
+
       setPair({
         track:newTrack,
         source:undefined
       })
     }else{ //no playable tracks
-      DEBUG && console.log("REACTPLAYLISTER / NO PLAYABLE TRACKS");
+      DEBUG && console.log("REACTPLAYLISTER / NO NEXT PLAYABLE TRACKS");
       handlePlaylistEnded();
     }
   }
@@ -435,6 +446,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             current:false,
             playable:true,//default
             url:url,
+            error:undefined,
             autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
             provider:provider ? {name:provider.name,key:provider.key} : undefined,
           }
@@ -499,18 +511,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     let ignoreUrls = [];
 
+    let collection = {};
+
     playlist.forEach(function(track){
       track.sources.forEach(function(source){
+
+        const url = source.url;
+        const supported = ReactPlayer.canPlay(source.url);
+
+        collection[url] = {
+          playable:supported,
+          error:supported ? undefined : 'Not supported by ReactPlayer'
+        }
+
         if ( ReactPlayer.canPlay(source.url) ) return;//continue
         ignoreUrls.push(source.url);
       });
     });
 
-    ignoreUrls = [...new Set(ignoreUrls)];//make unique
+    console.log("COUCOU REACTPLAYLISTER / INIT URLS COLLECTION",collection);
 
-    console.log("COUCOU REACTPLAYLISTER / INIT UNPLAYABLE URLS",ignoreUrls);
-
-    setUnplayableUrls(ignoreUrls);
+    setUrlCollection(collection);
 
   }, [playlist]);
 
@@ -606,9 +627,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
 
     if (!playlist) return;
-    if (!unplayableUrls) return;
+    if (!hasInitPlaylist) return;
 
-    console.log("SET 'PLAYABLE' PROPERTIES BY IGNORING URLS",unplayableUrls);
+    console.log("SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",urlCollection);
 
     setPlaylist(prevState => {
 
@@ -618,9 +639,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         const getUpdatedSources = (track) => {
           return track.sources.map(
             (sourceItem) => {
+
+              const url = sourceItem.url;
+              const urlCollectionItem = urlCollection[url];
+              const urlPlayable = urlCollectionItem.playable;
+              const urlError = urlCollectionItem.error;
+
               return {
                 ...sourceItem,
-                playable:!unplayableUrls.includes(sourceItem.url)
+                playable:urlPlayable,
+                error:urlError
               }
             }
           )
@@ -644,7 +672,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return newPlaylist
     });
 
-  }, [unplayableUrls]);
+  }, [urlCollection]);
 
   //update the 'current' properties for tracks and sources
   useEffect(() => {
@@ -691,7 +719,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update tracks history
   //TOUFIX TOUCHECK
-  
   useEffect(() => {
 
     const track = pair.track;
