@@ -225,17 +225,21 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setBackwards(false);
     setSkipping(false);//if we were skipping
 
-    setControls(prevState => {
-      return{
-        ...prevState,
-        mediaLoading:false
-      }
-    })
+    //if we are not requesting a play, consider that the media as finished loading when the player is ready.
+    if (!playRequest){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          mediaLoading:false
+        }
+      })
 
-    const track = getCurrentTrack(playlist);
-    const source = getCurrentSource(playlist);
+      const track = getCurrentTrack(playlist);
+      const source = getCurrentSource(playlist);
 
-    console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" LOADED",source.url);
+      console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
+    }
+
 
     //inherit React Player prop
     if (typeof props.onReady === 'function') {
@@ -245,6 +249,24 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //TOUFIX
     //allow to filter track & source using a fn prop ?
 
+  }
+
+  const handleSourceStart = (e) => {
+
+    //if we are requesting a play, consider that the media as finished loading once it has started.
+    if (playRequest){
+      setControls(prevState => {
+        return{
+          ...prevState,
+          mediaLoading:false
+        }
+      })
+
+      const track = getCurrentTrack(playlist);
+      const source = getCurrentSource(playlist);
+
+      console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
+    }
   }
 
   const handleSourceError = (e) => {
@@ -951,6 +973,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       //Callback props handled by ReactPlaylister
       onReady={handleSourceReady}
+      onStart={handleSourceStart}
       onError={handleSourceError}
       onEnded={handleSourceEnded}
       onPlay={handleSourcePlay}
@@ -958,7 +981,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       onDuration={handleSourceDuration}
 
       //inherit methods
-      onStart={props.onStart}
+
       onBuffer={props.onBuffer}
       onBufferEnd={props.onBufferEnd}
       onSeek={props.onSeek}
