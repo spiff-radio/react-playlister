@@ -609,8 +609,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!props.urls) return;
 
-    console.log("REACTPLAYLISTER / INIT PLAYLIST FROM URLS");
-
     /*
     Build Playlist
     */
@@ -730,7 +728,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       newPlaylist = updatePlaylistCurrent(newPlaylist,indices);
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST HAS INIT",playlist);
+    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST IS INITIALIZING WITH "+newPlaylist.length+" TRACKS.",newPlaylist);
 
     setPlaylist(newPlaylist);
 
