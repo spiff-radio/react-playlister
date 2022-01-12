@@ -835,7 +835,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       }
     }else{
-      setUrl();
+      //we would like to use
+      //setUrl();
+      //here, but it seems that it makes some browser (eg. iOS Firefox) stop when skipping to the next track.
+      //so just hide our player using the 'skipping' state for now.
+      //we should check again for this in a few months.
     }
 
   }, [playlist]);
@@ -946,7 +950,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className='react-playlister'>
+    <div className='react-playlister '
+      +(skipping ? 'skipping' : '')
+    }>
       <ReactPlayer
 
       //props handled by ReactPlaylister
