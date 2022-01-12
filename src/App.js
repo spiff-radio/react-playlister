@@ -142,7 +142,7 @@ function App() {
       loop={loop}
       shuffle={shuffle}
       autoskip={autoskip}
-      disabledProviders={['soundcloud']}
+      //disabledProviders={['soundcloud']}
 
       /*
       ReactPlayer props
