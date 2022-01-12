@@ -37,9 +37,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //should we skip if the track ends ?
   const skipEnded = props.skipEnded ?? true;
 
-  //should we skip if track has no sources ?
-  const skipNoSources = props.skipNoSources ?? true;
-
   //do we iterate URLs backwards ?
   //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
@@ -222,6 +219,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handleSourceReady = (player) => {
 
+    const track = getCurrentTrack(playlist);
+    const source = getCurrentSource(playlist);
+    if (!track || !source) return;
+
+    //inherit React Player prop
+    if (typeof props.onReady === 'function') {
+      props.onReady(player);
+    }
+
     setBackwards(false);
     setSkipping(false);//if we were skipping
 
@@ -234,24 +240,21 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       })
 
-      const track = getCurrentTrack(playlist);
-      const source = getCurrentSource(playlist);
-
       console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
     }
-
-
-    //inherit React Player prop
-    if (typeof props.onReady === 'function') {
-      props.onReady(player);
-    }
-
-    //TOUFIX
-    //allow to filter track & source using a fn prop ?
 
   }
 
   const handleSourceStart = (e) => {
+
+    const track = getCurrentTrack(playlist);
+    const source = getCurrentSource(playlist);
+    if (!track || !source) return;
+
+    //inherit React Player prop
+    if (typeof props.onStart === 'function') {
+      props.onStart(e);
+    }
 
     //if we are requesting a play, consider that the media as finished loading once it has started.
     if (playRequest){
@@ -261,9 +264,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           mediaLoading:false
         }
       })
-
-      const track = getCurrentTrack(playlist);
-      const source = getCurrentSource(playlist);
 
       console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
     }
@@ -535,26 +535,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         )
       }
 
-      const updatedSources = getUpdatedSources(trackItem);
+      trackItem.sources = getUpdatedSources(trackItem);
 
-      const playableSources = updatedSources.filter(function(source) {
+      const playableSources = trackItem.sources.filter(function(source) {
         return source.playable;
       });
 
-      const hasPlayableSources = (playableSources.length > 0);
-      let isPlayableTrack = hasPlayableSources;
+      trackItem.playable = (playableSources.length > 0);
 
-      //here's a chance to filter the playable tracks if you have a very specific need for it.
-      //(for instance, you might want to resolve a promise in a parent component)
       if (typeof props.filterPlayableTrack === 'function') {
-        isPlayableTrack = props.filterPlayableTrack(trackItem,trackItem.index,isPlayableTrack);
+        trackItem.playable = props.filterPlayableTrack(trackItem.playable,trackItem);
       }
 
-      return {
-        ...trackItem,
-        playable:isPlayableTrack,
-        sources:updatedSources
-      }
+      return trackItem;
     });
     DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",playlist);
     return playlist;
@@ -803,12 +796,24 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = getCurrentTrack(playlist);
     if (!track) return;
 
-    //this track has no sources
-    if (!track.sources.length){
-      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" HAS NO SOURCES...");
-      if (playRequest && skipNoSources){
-        DEBUG && console.log("REACTPLAYLISTER / ...THUS SKIP IT");
+    if (playRequest){
+      let doSkip = false;
+      if (!track.playable){
+        DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" IS NOT PLAYABLE.");
+        doSkip = true;
+      }else if (!track.sources.length){
+        //this track has probably been set to 'playable' using the filterPlayableTrack method.
+        //Now, allow to filter the skip value. See Readme.
+        DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" IS SET AS PLAYABLE, BUT HAS NO SOURCES.",track.index);
+        doSkip = true;
+        if (typeof props.filterSkipUnsourcedTrack === 'function') {
+          doSkip = props.filterSkipUnsourcedTrack(doSkip,track);
+        }
+      }
+
+      if (doSkip){
         skipTrack();
+        return;
       }
     }
 
@@ -832,8 +837,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }else{
       setUrl();
     }
-
-
 
   }, [playlist]);
 
