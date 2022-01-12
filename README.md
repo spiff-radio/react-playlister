@@ -8,14 +8,14 @@ A demo is available [here](https://spiff-radio.org/react-playlister).
 
 Prop | Description | Default
 ---- | ----------- | -------
-`urls` | An array of tracks. A track can be a single URL or an array of URLs, which could be useful if you want to offer streams to differents services; or if some URLs are not playable (geoblocked, ...).
-`index` | Load a specific item when component is initialized.<br/>&nbsp; ◦ &nbsp;Track: index of the selected track (starting at 0), eg. `1` (or `[1]`)<br/>&nbsp; ◦ &nbsp;Source: array of track index + source index (starting at 0) eg. `[0,2]`
+`urls` | An array of tracks. A track can be a single URL or an array of URLs, which could be useful if you want to offer streams to differents services; or if some URLs are not playable (geoblocked, ...). | `undefined`
+`index` | Load a specific item when component is initialized.<br/>&nbsp; ◦ &nbsp;Track: index of the selected track (starting at 0), eg. `1` (or `[1]`)<br/>&nbsp; ◦ &nbsp;Source: array of track index + source index (starting at 0) eg. `[0,2]` | `undefined`
 `loop` | Set to `true` or `false` to loop the playlist. | `false`
 `shuffle` | Set to `true` or `false` to enable shuffle mode. **(not yet implemented)** | `false`
 `autoskip` | Ignore unplayable items when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it. | `true`
 `skipError` | should we skip when a media error is fired ? | `true`
 `skipEnded` | should we skip when a media ends ? | `true`
-`disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `[]`
+`disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `undefined`
 `sortProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
 
 You can also set [the props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#props).
