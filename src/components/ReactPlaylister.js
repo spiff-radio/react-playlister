@@ -42,7 +42,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [backwards,setBackwards] = useState(false);
 
   //are we currently skipping ?
-  const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
+  const [skipping,setSkipping] = useState(false);
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
 
@@ -229,7 +229,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setBackwards(false);
-    setSkipping(false);//if we were skipping
+
+    if(playRequest){
+      setSkipping(false);
+    }
 
     //if we are not requesting a play, consider that the media as finished loading when the player is ready.
     if (!playRequest){
@@ -326,6 +329,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const handleSourcePlay = () => {
+
     //inherit React Player prop
     if (typeof props.onPlay === 'function') {
       props.onPlay();
@@ -379,8 +383,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const skipTrack = (goBackwards) => {
 
-    setSkipping(true);
-
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
@@ -406,8 +408,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
-
-    setSkipping(true);
 
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
@@ -757,8 +757,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (!didFirstInit) return;
 
-    setSkipping(true);
-
     setPlaylist(prevState => {
       return updatePlaylistCurrent(prevState,props.index);
     })
@@ -796,6 +794,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const track = getCurrentTrack(playlist);
     if (!track) return;
+
+    setSkipping(playRequest);
 
     if (playRequest){
       let doSkip = false;
@@ -906,21 +906,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //when play is requested, set loading until media is playing
   useEffect(() => {
-    setControls(prevState => {
-      return{
-        ...prevState,
-        playLoading:prevState.playLoading ? prevState.playing : (playRequest && !prevState.playing)
-      }
+    setControls({
+      ...controls,
+      playLoading:(playRequest && !controls.playing)
     })
-  }, [playRequest]);
+  }, [playRequest,controls.playing]);
 
   //when media URL is loaded, set loading until media is ready
   useEffect(() => {
-    setControls(prevState => {
-      return{
-        ...prevState,
-        mediaLoading:(url !== undefined)
-      }
+    setControls({
+      ...controls,
+      mediaLoading:(url !== undefined)
     })
   }, [url]);
 
@@ -951,9 +947,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className={'react-playlister '
-      +(skipping ? 'skipping' : '')
-    }>
+    <div className='react-playlister'>
       <ReactPlayer
 
       //props handled by ReactPlaylister
@@ -962,7 +956,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={playRequest}
+      playing={(playRequest && !skipping)}
       controls={props.controls}
       light={props.light}
       volume={props.volume}

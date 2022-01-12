@@ -2,7 +2,7 @@
   > div {
     margin:auto;
   }
-  &.skipping > * {
+  &.disabled > * {
     opacity:.25;
     pointer-events:none;
   }
