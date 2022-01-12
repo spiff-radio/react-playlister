@@ -1,13 +1,18 @@
 import React from "react";
 import classNames from "classnames";
+import { Label } from 'semantic-ui-react';
 
 export const AppFeedback = props => {
 
+  const playlist = props.playlist;
+
   const SourceFeedback = props => {
+
+    const source = props.data;
 
     const handleSourceSelect = (e) => {
       if (typeof props.onSelect === 'function') {
-        props.onSelect([props.track_index,props.source_index]);
+        props.onSelect([props.trackIndex,props.sourceIndex]);
       }
     }
 
@@ -15,7 +20,27 @@ export const AppFeedback = props => {
       <span
       onClick={handleSourceSelect}
       >
-      {props.url}
+        <Label>
+        #{source.index}
+        </Label>
+
+        <span>{source.url}</span>
+        {
+          source.provider &&
+          <Label color="teal">{source.provider.name}</Label>
+        }
+        {
+          !source.autoplay &&
+          <Label color="orange">no autoplay</Label>
+        }
+        {
+          !source.playable &&
+          <Label color="red" title={source.error}>not playable</Label>
+        }
+        {
+          props.selected &&
+          <Label color="black">selected</Label>
+        }
       </span>
     );
   }
@@ -26,7 +51,7 @@ export const AppFeedback = props => {
 
     const handleTrackSelect = (e) => {
       if (typeof props.onSelect === 'function') {
-        props.onSelect([props.track_index]);
+        props.onSelect([props.trackIndex]);
       }
     }
 
@@ -42,8 +67,8 @@ export const AppFeedback = props => {
       <ul>
         {
           props.sources.map((source,sourceKey) => {
-            const isActive = (props.source_index === sourceKey);
-            const isCurrent = props.current && isActive;
+            const isSelected = (source.current === true);
+            const isCurrent = props.current && isSelected;
 
             return(
               <li
@@ -52,17 +77,16 @@ export const AppFeedback = props => {
               className={
                 classNames({
                   source:true,
-                  playable:source.playable,
-                  current:isCurrent,
-                  active:isActive
+                  current:isCurrent
                 })
               }
               >
                 <SourceFeedback
-                url={source.url}
-                track_index={props.track_index}
-                source_index={sourceKey}
+                sourceIndex={source.index}
+                trackIndex={source.trackIndex}
                 onSelect={props.onSelect}
+                selected={isSelected}
+                data={source}
                 />
               </li>
             )
@@ -78,34 +102,39 @@ content
   }
 
   return(
-    <ul>
-    {
-      props.playlist.map((track,trackKey) => {
-        const isCurrent = (props.controls.track_index === trackKey);
-        const source_index = track.current_source;
-        return (
-          <li
-          key={trackKey}
-          className={
-            classNames({
-              track:true,
-              playable:track.playable,
-              current:isCurrent
-            })
-          }
-          >
-            <TrackFeedback
-            sources={track.sources}
-            current={isCurrent}
-            track_index={trackKey}
-            source_index={source_index}
-            onSelect={props.onSelect}
-            />
-          </li>
-        );
-      })
-    }
-    </ul>
+    <>
+      {
+        playlist &&
+        <ul>
+        {
+          playlist.map((track,index) => {
+
+            const isCurrent = track.current;
+
+            return (
+              <li
+              key={index}
+              className={
+                classNames({
+                  track:true,
+                  playable:track.playable,
+                  current:isCurrent
+                })
+              }
+              >
+                <TrackFeedback
+                sources={track.sources}
+                current={isCurrent}
+                trackIndex={index}
+                onSelect={props.onSelect}
+                />
+              </li>
+            );
+          })
+        }
+        </ul>
+      }
+    </>
   );
 
 }

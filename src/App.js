@@ -1,9 +1,10 @@
 import logo from './logo.svg';
 import './App.scss';
-import React, { useState, useRef } from "react";
+import 'semantic-ui-css/semantic.min.css';
+import React, { useState, useEffect,useRef } from "react";
 import { ReactPlaylister } from "./components/ReactPlaylister";
 import { AppFeedback } from "./components/AppFeedback";
-
+import { AppControls } from "./components/AppControls";
 
 function App() {
 
@@ -14,6 +15,7 @@ function App() {
     'https://www.youtube.com/watch?v=E11DAkrjlP8',
     [
       'https://www.youtube.com/watch?v=K5LU8K7ZK34',
+      'https://www.youtube.com/watch?v=K5LU8K7ZK34',
       'https://soundcloud.com/i_d_magazine/premiere-sonnymoon-grains-of-friends',
       'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
@@ -23,6 +25,7 @@ function App() {
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
       'https://www.notplayable.com',
       'https://www.youtube.com/watch?v=v3RTs0LCc-8',
+      'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     'https://www.notplayable.com',
     'https://www.notplayable.com',
@@ -32,43 +35,33 @@ function App() {
   ]);
 
   const [index,setIndex] = useState([3,1]);
-  const [playerPlaylist, setPlayerPlaylist] = useState([]);
-  const [playerControls, setPlayerControls] = useState({});
+  const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
+  const [playlisterControls, setPlaylisterControls] = useState();
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
-  const [playing, setPlaying] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
+
+  //sync the playRequest state with the media playing state:
+  //(eg. because we've used the Youtube controls to play the media instead of our play button)
+  useEffect(() => {
+    if (!playlisterControls) return;
+    setPlayRequest(playlisterControls.playing);
+  }, [playlisterControls]);
 
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
-    setPlayerPlaylist(playlist);
+    setPlaylisterPlaylist(playlist);
   }
 
   const handleControlsUpdated = (controls) => {
     console.log("APP / CONTROLS UPDATED",controls);
-    setPlayerControls(controls);
+    setPlaylisterControls(controls);
   }
 
   const handlePlaylistEnded = () => {
     console.log("PLAYLIST ENDED");
-  }
-
-  const handlePlay = () =>{
-    setPlayRequest(true);
-    setPlaying(true);
-  }
-
-  const handlePause = () =>{
-    setPlayRequest(false);
-    setPlaying(false);
-  }
-
-  const handleGetReactPlayer = (e) => {
-    e.preventDefault();
-    const player = playlisterRef.current.getReactPlayer();
-    console.log(player);
   }
 
   const handleSourceSelect = (index) => {
@@ -83,13 +76,6 @@ function App() {
     setUrls(arr);
   }
 
-  const trackIndex = playerControls.track_index;
-  const hasPreviousTracks = playerControls?.previous_tracks?.length;
-  const hasNextTracks = playerControls?.next_tracks?.length;
-
-  const sourceIndex = playerControls.source_index;
-  const hasPreviousSources = playerControls?.previous_sources?.length;
-  const hasNextSources = playerControls?.next_sources?.length;
 
   console.log("APP RELOAD");
 
@@ -108,9 +94,8 @@ function App() {
           <h3>Input</h3>
           <textarea
           ref={inputRef}
-          >
-          {JSON.stringify(urls,null,2) }
-          </textarea>
+          defaultValue={JSON.stringify(urls,null,2) }
+          />
           <p>
             <button
             onClick={handleUpdateUrls}
@@ -120,90 +105,49 @@ function App() {
         <div id="output">
           <h3>Feedback</h3>
           <AppFeedback
-          playlist={playerPlaylist}
-          controls={playerControls}
+          urls={urls}
+          playlist={playlisterPlaylist}
+          controls={playlisterControls}
           onSelect={handleSourceSelect}
           />
         </div>
       </div>
-      {
-        playerPlaylist &&
-          <div id="controls">
-
-            <p>
-              <strong>track #{trackIndex}</strong>
-              <button
-              onClick={(e) => playlisterRef.current.previousTrack()}
-              disabled={!hasPreviousTracks}
-              >Previous</button>
-              <button
-              onClick={(e) => playlisterRef.current.nextTrack()}
-              disabled={!hasNextTracks}
-              >Next</button>
-            </p>
-
-            <p>
-              <strong>source #{sourceIndex}</strong>
-              <button
-              onClick={(e) => playlisterRef.current.previousSource()}
-              disabled={!hasPreviousSources}
-              >Previous</button>
-              <button
-              onClick={(e) => playlisterRef.current.nextSource()}
-              disabled={!hasNextSources}
-              >Next</button>
-            </p>
-
-            <p>
-              <strong>playing</strong>
-              <span>{playing ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setPlayRequest(!playing)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>loop</strong>
-              <span>{loop ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setLoop(!loop)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>shuffle</strong>
-              <span>{shuffle ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setShuffle(!shuffle)}
-              >toggle</button>
-            </p>
-
-            <p>
-              <strong>autoskip</strong>
-              <span>{autoskip ? 'true' : 'false'}</span>&nbsp;
-              <button
-              onClick={(e) => setAutoskip(!autoskip)}
-              >toggle</button><br/>
-            </p>
-
-            <p>
-              <button
-              onClick={handleGetReactPlayer}
-              >Get ReactPlayer instance (see console)</button>
-            </p>
-
-          </div>
-      }
+      <AppControls
+      playlister={playlisterRef}
+      playlist={playlisterPlaylist}
+      controls={playlisterControls}
+      loop={loop}
+      shuffle={shuffle}
+      autoskip={autoskip}
+      onTogglePlay={(bool) => setPlayRequest(bool)}
+      onToggleLoop={(bool) => setLoop(bool)}
+      onToggleShuffle={(bool) => setShuffle(bool)}
+      onToggleAutoskip={(bool) => setAutoskip(bool)}
+      />
       <ReactPlaylister
       ref={playlisterRef}
 
-      //props
-      urls={urls}
-      index={index} //track index OR [track index,source index]
-      loop={loop}
-      autoskip={autoskip}
+      /*
+      props
+      */
 
-      //ReactPlayer props
+      //URLs input array.
+      //It can be single-level array (each item is a source);
+      //or two-levels (each item is a track; which means an array of sources)
+      urls={urls}
+      //force select an item.
+      //if your input is single-level; set the source index
+      //if your input is two-levels; either the track index OR the [track index, source index]
+      index={index}
+      loop={loop}
+      shuffle={shuffle}
+      autoskip={autoskip}
+      //disabledProviders={['soundcloud']}
+
+      /*
+      ReactPlayer props
+      */
+
       playing={playRequest}
       controls={true}
       /*
@@ -225,15 +169,16 @@ function App() {
       config={}
       */
 
-      //Callback props
-      onPlaylistUpdated={handlePlaylistUpdated}
-      onControlsUpdated={handleControlsUpdated}
-      onPlaylistEnded={handlePlaylistEnded}
-
-      //ReactPlayer callback props
-      onPlay={handlePlay}
-      onPause={handlePause}
       /*
+      Callback props
+      */
+      onControlsUpdated={handleControlsUpdated}
+      onPlaylistUpdated={handlePlaylistUpdated}
+      onPlaylistEnded={handlePlaylistEnded}
+      /*
+      ReactPlayer callback props
+      onPlay={}
+      onPause={}
       onReady={}
       onStart={}
       onProgress={}

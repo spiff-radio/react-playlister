@@ -41,10 +41,6 @@
   > div {
     margin:auto;
   }
-  &.no-source > div{
-    opacity:.25;
-    pointer-events:none;
-  }
 }
 
 #feedback{
@@ -83,32 +79,32 @@
         padding:0;
       }
     }
-    .track{
-      cursor: pointer;
-      margin:.5em 0;
+
+    .track,.source{
+      border-left:5px solid white;
       > * {
         margin-left:.5em;
+        display: block;
       }
-      border-left:5px solid white;
       &.current{
         border-left:5px solid #CCC;
       }
+    }
+
+    .track{
+      cursor: pointer;
+      padding: 1em 0;
+
+
       &:not(.playable){
         opacity:.5;
       }
     }
     .source{
       cursor: pointer;
-      &:not(.playable){
-        text-decoration: line-through;
-      }
-      &.active{
-        &:after{
-          content:" *";
-        }
-      }
-      &.current{
-        font-weight:bold;
+      .ui.label{
+        font-size:.8em;
+        padding:.2em .5em;
       }
     }
   }
