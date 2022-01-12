@@ -951,7 +951,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className='react-playlister '
+    <div className={'react-playlister '
       +(skipping ? 'skipping' : '')
     }>
       <ReactPlayer
