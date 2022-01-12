@@ -40,6 +40,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
 
+  //are we currently skipping ?
+  const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
+
   const [playlist,setPlaylist] = useState();//our (transformed) datas
 
   //object containing each playlist URL (as properties);
@@ -225,6 +228,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setBackwards(false);
+    setSkipping(false);//if we were skipping
 
     //if we are not requesting a play, consider that the media as finished loading when the player is ready.
     if (!playRequest){
@@ -374,6 +378,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const skipTrack = (goBackwards) => {
 
+    setSkipping(true);
+
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
@@ -399,6 +405,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
+
+    setSkipping(true);
 
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
@@ -748,12 +756,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (!didFirstInit) return;
 
+    setSkipping(true);
+
     setPlaylist(prevState => {
       return updatePlaylistCurrent(prevState,props.index);
     })
 
   }, [props.index]);
 
+  //after first render
   useEffect(() => {
     setDidFirstInit(true);
   }, []);
