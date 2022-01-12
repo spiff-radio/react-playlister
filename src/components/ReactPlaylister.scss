@@ -1,0 +1,9 @@
+.react-playlister{
+  > div {
+    margin:auto;
+  }
+  &.skipping > * {
+    opacity:.25;
+    pointer-events:none;
+  }
+}
