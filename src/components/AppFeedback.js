@@ -12,7 +12,7 @@ export const AppFeedback = props => {
 
     const handleSourceSelect = (e) => {
       if (typeof props.onSelect === 'function') {
-        props.onSelect([props.track_index,props.source_index]);
+        props.onSelect([props.trackIndex,props.sourceIndex]);
       }
     }
 
@@ -51,7 +51,7 @@ export const AppFeedback = props => {
 
     const handleTrackSelect = (e) => {
       if (typeof props.onSelect === 'function') {
-        props.onSelect([props.track_index]);
+        props.onSelect([props.trackIndex]);
       }
     }
 
@@ -82,8 +82,8 @@ export const AppFeedback = props => {
               }
               >
                 <SourceFeedback
-                source_index={sourceKey}
-                track_index={props.track_index}
+                sourceIndex={source.index}
+                trackIndex={source.trackIndex}
                 onSelect={props.onSelect}
                 selected={isSelected}
                 data={source}
@@ -125,7 +125,7 @@ content
                 <TrackFeedback
                 sources={track.sources}
                 current={isCurrent}
-                track_index={index}
+                trackIndex={index}
                 onSelect={props.onSelect}
                 />
               </li>
