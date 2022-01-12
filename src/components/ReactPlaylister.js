@@ -3,7 +3,6 @@ import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
-const REACTPLAYER_PROVIDERS = reactplayerProviders;
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 
 export const ReactPlaylister = forwardRef((props, ref) => {
@@ -40,9 +39,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //do we iterate URLs backwards ?
   //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
-
-  //are we currently skipping ?
-  const [skipping,setSkipping] = useState(true); //true on init, we've got to find the first track!
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
 
@@ -143,7 +139,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         let currentIndex = array.length,  randomIndex;
 
         // While there remain elements to shuffle...
-        while (currentIndex != 0) {
+        while (currentIndex !== 0) {
 
           // Pick a remaining element...
           randomIndex = Math.floor(Math.random() * currentIndex);
@@ -229,7 +225,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setBackwards(false);
-    setSkipping(false);//if we were skipping
 
     //if we are not requesting a play, consider that the media as finished loading when the player is ready.
     if (!playRequest){
@@ -379,8 +374,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const skipTrack = (goBackwards) => {
 
-    setSkipping(true);
-
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
@@ -403,8 +396,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   const skipSource = (goBackwards) => {
-
-    setSkipping(true);
 
     const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
