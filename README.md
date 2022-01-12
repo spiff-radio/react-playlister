@@ -15,8 +15,8 @@ Prop | Description | Default
 `autoskip` | Ignore unplayable items when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it. | `true`
 `skipError` | should we skip when a media error is fired ? | `true`
 `skipEnded` | should we skip when a media ends ? | `true`
-`disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](//https://github.com/cookpete/react-player/blob/master/src/players/index.js | `[]`
-`sortProviders` | Sort the URLs based on an array of [providers keys](//https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
+`disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `[]`
+`sortProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
 
 You can also set [the props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#props).
 
