@@ -53,7 +53,7 @@ Method | Description
 
 The *filterPlayableTrack* and *filterSkipUnsourcedTrack* methods are useful in a very specific case:
 
-Let's say you have a track without sources (URLs), and that you're able (eg. using an API call) to query its sources **when** track is selected.
+Let's say you have a track without sources (URLs), and that you're able (eg. using an API call) to query its sources **when** that track is selected.
 
 1/ Consider that your track *is* playable even if it has no sources yet using the *filterPlayableTrack* method :
 
