@@ -930,9 +930,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update 'loading' property of the controls
   useEffect(() => {
-    setControls({
-      ...controls,
-      loading:loading
+    setControls(prevState => {
+      return{
+        ...prevState,
+        loading:loading
+      }
     })
   }, [loading]);
 
