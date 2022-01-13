@@ -194,27 +194,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queue[0];
   }
 
-  const getCurrentTrack = (playlist) => {
+  export const getCurrentTrack = (playlist) => {
     return playlist?.find(function(track) {
       return track.current;
     });
   }
 
-  const getCurrentSource = (playlist) => {
+  export const getCurrentSource = (playlist) => {
     const track = getCurrentTrack(playlist);
     return track?.sources.find(function(source) {
       return source.current;
     });
   }
 
-  const getCurrentIndices = (playlist) => {
+  export const getCurrentIndices = (playlist) => {
     const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
-    const trackIndex = track ? track.index : undefined;
-    const sourceIndex = source ? source.index : undefined;
-
-    return [trackIndex,sourceIndex];
-
+    return [track?.index,source.index];
   }
 
   const handleSourceReady = (player) => {
@@ -851,10 +847,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (!playlist) return;
 
     const track = getCurrentTrack(playlist);
-    if (track === undefined) return;
+    if (!track) return;
 
     const source = getCurrentSource(playlist);
-    if ( (source === undefined) && track.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
+    if ( !source && track.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
 
     let appendControls = {};
 
