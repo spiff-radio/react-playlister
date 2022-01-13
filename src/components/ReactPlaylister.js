@@ -600,7 +600,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(()=>{
     if(typeof controls.playing === 'undefined') return;
     setPlaying(controls.playing);
-  },[controls])
+  },[controls.playing])
 
   //...but the prop has the priority
   useEffect(()=>{
