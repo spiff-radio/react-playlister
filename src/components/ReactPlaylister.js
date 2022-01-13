@@ -893,10 +893,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [playlist,loop,autoskip]);
 
-  useEffect(() => {
-    setLoading(playRequest);
-  }, [playRequest]);
-
   //update 'loading' property of the controls
   useEffect(() => {
 
@@ -957,7 +953,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className={'react-playlister' + (loading ? ' disabled' : '')}>
+    <div className='react-playlister'>
       <ReactPlayer
 
       //props handled by ReactPlaylister
