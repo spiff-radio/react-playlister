@@ -58,7 +58,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
 
-  const [playing,setPlaying] = useState(false);
+  const [playRequest,setPlayRequest] = useState(false);
   const [loading,setLoading] = useState(false);
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
@@ -82,7 +82,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [url, setUrl] = useState();//url for ReactPlayer
 
   const [didFirstInit,setDidFirstInit] = useState(false);
-  const prevIndices = useRef();
+  const [indices,setIndices] = useState(false);
 
   //build a queue of keys based on an array
   //If needle is NOT defined, it will return the full array.
@@ -226,7 +226,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //if we are not requesting a play,
     //consider that 'loading' has finished when the player is ready.
-    if (!playing){
+    if (!playRequest){
       setLoading(false);
     }
 
@@ -245,11 +245,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onStart(e);
     }
 
-    //if we are requesting a play,
-    //consider that the media as finished loading once it has started.
-    if (playing){
-      setLoading(false);
-    }
+
+
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" STARTED",source.url);
   }
 
@@ -278,7 +275,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //skip automatically if the player is playing
-    if (playing && skipError){
+    if (playRequest && skipError){
       skipSource();
     }
 
@@ -316,6 +313,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPlay();
     }
 
+    setPlayRequest(true);
+    setLoading(false);
+
+
     setControls(prevState => {
       return{
         ...prevState,
@@ -330,6 +331,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if (typeof props.onPause === 'function') {
       props.onPause();
     }
+
+    setPlayRequest(false);
+    setLoading(false);
 
     setControls(prevState => {
       return{
@@ -351,6 +355,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     source.duration = duration * 1000; //in ms
 
     //TOUFIX TOUCHECK should we update the track duration too ?
+
+  }
+
+  const handleSourceBuffer = () => {
+
+    //inherit React Player prop
+    if (typeof props.onBuffer === 'function') {
+      props.onBuffer();
+    }
+
+    setLoading(true);
 
   }
 
@@ -377,7 +392,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+backwardsMsg,newTrackIndex);
 
-      setPlaylist( updatePlaylistCurrent(playlist,newTrackIndex) )
+      setIndices(newTrackIndex);
 
     }else{ //no more playable tracks
       handlePlaylistEnded();
@@ -406,7 +421,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM SOURCE -> SOURCE",source,newSource);
 
-    setPlaylist( updatePlaylistCurrent(playlist,[track.index,newSource.index]) )
+    setIndices([track.index,newSource.index]);
 
   }
 
@@ -593,24 +608,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  /*
-  update the "playing" state.
-  */
-  //consider 'controls.playing' too since user might have toggled using a native player's controls.
-  useEffect(()=>{
-    if(typeof controls.playing === 'undefined') return;
-    setPlaying(controls.playing);
-  },[controls.playing])
-
-  //...but the prop has the priority
+  //update the "playing" state from props
   useEffect(()=>{
     if(typeof props.playing === 'undefined') return;
-    setPlaying(props.playing);
+    setPlayRequest(props.playing);
   },[props.playing])
 
   useEffect(()=>{
-    console.log("SET PLAYING",playing);
-  },[playing])
+    console.log("***SET PLAY REQUEST",playRequest);
+  },[playRequest])
+
+  useEffect(()=>{
+    console.log("***SET LOADING",loading);
+  },[loading])
 
   //build our playlist based on the prop URLs
   useEffect(() => {
@@ -725,16 +735,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
     let newPlaylist = buildPlaylist(props.urls);
 
-    //set playable props
-    newPlaylist = updatePlaylistPlayable(newPlaylist,urlCollection);
-
     //set current prop
-    if (!didFirstInit){
-      newPlaylist = updatePlaylistCurrent(newPlaylist,props.index);
-    }else{
-      const indices = getCurrentIndices(playlist);
-      newPlaylist = updatePlaylistCurrent(newPlaylist,indices);
-    }
+    const indices = (!didFirstInit) ? props.index : getCurrentIndices(playlist);
+    setIndices(indices);
 
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST IS INITIALIZING WITH "+newPlaylist.length+" TRACKS.",newPlaylist);
 
@@ -742,7 +745,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [props.urls]);
 
-  //update playable
+  //after first render
+  useEffect(() => {
+    setDidFirstInit(true);
+  }, []);
+
+  //update indices from prop.
+  useEffect(() => {
+    if (!didFirstInit) return;
+    setIndices(props.index);
+  }, [props.index]);
+
+  //update 'playable' properties
   useEffect(() => {
     if (!didFirstInit) return;
 
@@ -752,47 +766,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [urlCollection]);
 
-  //update indices from prop.
+  //update 'current' properties
   useEffect(() => {
     if (!didFirstInit) return;
-
-    setPlaylist(prevState => {
-      return updatePlaylistCurrent(prevState,props.index);
-    })
-
-  }, [props.index]);
-
-  //after first render
-  useEffect(() => {
-    setDidFirstInit(true);
-  }, []);
-
-  //set 'loading' state if our indices are updated.
-  useEffect(() => {
-    const newIndices = getCurrentIndices(playlist);
-    const oldIndices = prevIndices.current;
-    const newTrackIndice = newIndices[0];
-    if (typeof newTrackIndice === 'undefined') return;//track indice not set
-
-    if ( JSON.stringify(oldIndices) === JSON.stringify(newIndices) ) return;//no update
-
-    DEBUG && console.log("REACTPLAYLISTER / UPDATED CURRENT INDICES",newIndices);
-
-    //update indices
-    prevIndices.current = newIndices;
-
     setLoading(true);
-
-  }, [playlist]);
-
-  useEffect(() => {
-    if (!prevIndices.current) return;
-    if (loading){
-      DEBUG &&console.log("STARTED LOADING WITH INDICES",prevIndices.current);
-    }else{
-      DEBUG &&console.log("FINISHED LOADING WITH INDICES",prevIndices.current);
-    }
-  }, [loading]);
+    setPlaylist(prevState => {
+      return updatePlaylistCurrent(prevState,indices);
+    })
+  },[indices])
 
   //update tracks history
   //TOUFIX TOUCHECK
@@ -821,7 +802,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = getCurrentTrack(playlist);
     if (!track) return;
 
-    if (playing){
+    if (playRequest){
       let doSkip = false;
       if (!track.playable){
         DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" IS NOT PLAYABLE.");
@@ -869,7 +850,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [playlist]);
 
-  //update the controls
+  //update the previous/next controls
   useEffect(() => {
 
     if (!playlist) return;
@@ -912,6 +893,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }, [playlist,loop,autoskip]);
 
+  useEffect(() => {
+    setLoading(playRequest);
+  }, [playRequest]);
+
+  //update 'loading' property of the controls
+  useEffect(() => {
+
+    if (loading){
+      DEBUG &&console.log("STARTED LOADING WITH INDICES",indices);
+    }else{
+      DEBUG &&console.log("FINISHED LOADING WITH INDICES",indices);
+    }
+
+    setControls(prevState => {
+      return{
+        ...prevState,
+        loading:loading
+      }
+    })
+  }, [loading]);
+
   //warn parent that the playlist has been updated
   useEffect(() => {
     if (!playlist) return;
@@ -927,16 +929,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onControlsUpdated(controls);
     }
   }, [controls]);
-
-  //update 'loading' property of the controls
-  useEffect(() => {
-    setControls(prevState => {
-      return{
-        ...prevState,
-        loading:loading
-      }
-    })
-  }, [loading]);
 
   //methods parent can use
   //https://medium.com/@nugen/react-hooks-calling-child-component-function-from-parent-component-4ea249d00740
@@ -965,7 +957,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
    )
 
   return (
-    <div className='react-playlister'>
+    <div className={'react-playlister' + (loading ? ' disabled' : '')}>
       <ReactPlayer
 
       //props handled by ReactPlaylister
@@ -974,11 +966,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       ref={reactPlayerRef}
 
       //inherit props
-      playing={playing}
+      playing={playRequest}
       controls={props.controls}
       light={props.light}
       volume={props.volume}
-      muted={(loading ? true : props.muted)} //avoid bugs when loading
+      muted={props.muted} //avoid bugs when loading
       playbackRate={props.playbackRate}
       width={props.width}
       height={props.height}
@@ -1004,7 +996,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       //inherit methods
 
-      onBuffer={props.onBuffer}
+      onBuffer={handleSourceBuffer}
       onBufferEnd={props.onBufferEnd}
       onSeek={props.onSeek}
       onProgress={props.onProgress}
