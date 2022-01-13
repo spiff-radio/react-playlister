@@ -30,10 +30,6 @@ export const AppFeedback = props => {
           <Label color="teal">{source.provider.name}</Label>
         }
         {
-          !source.autoplay &&
-          <Label color="orange">no autoplay</Label>
-        }
-        {
           !source.playable &&
           <Label color="red" title={source.error}>not playable</Label>
         }

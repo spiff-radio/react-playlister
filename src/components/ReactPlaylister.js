@@ -60,13 +60,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [playRequest,setPlayRequest] = useState(false);
   const [loading,setLoading] = useState(false);
+  const [skipping,setSkipping] = useState(false);
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
 
   //object containing each playlist URL (as properties);
   //with its playable / error status
   //this way, even if an URL is used multiple times, those properties will be shared.
-  const [urlCollection,setUrlCollection] = useState([]);
+  const [mediaErrors,setMediaErrors] = useState([]);
 
   const [trackHistory,setTrackHistory] = useState([]);
 
@@ -132,25 +133,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queue;
   }
 
-  const filterTrack = (track) => {
-
-    const isPlayableTrack = (track) => {
-      return track.playable;
-    }
-
-    if (autoskip){
-      return isPlayableTrack(track);
-    }
-
-    return true;
-  }
-
   const getTracksQueue = (playlist,track,loop,backwards) => {
     let queue = getArrayQueue(playlist,track,loop,backwards);
 
     if (autoskip){
       //filter only playable tracks
-      queue = queue.filter(filterTrack);
+      queue = queue.filter(track => {
+        return track.playable;
+      });
     }
 
     if (shuffle){
@@ -193,9 +183,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return false;
       }
 
-      if (!source.autoplay){
-        return false;
-      }
     }
 
     return true;
@@ -258,16 +245,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("REACTPLAYLISTER / ERROR PLAYING MEDIA",sourceUrl);
 
     //urls collection
-    const newUrlCollection = {
-      ...urlCollection,
-      [sourceUrl]:{
-        ...urlCollection[sourceUrl],
-        error:'Error while playing media',
-        playable:false
-      }
+    const newMediaErrors = {
+      ...mediaErrors,
+      [sourceUrl]:'Error while playing media'
     }
 
-    setUrlCollection(newUrlCollection);
+    setMediaErrors(newMediaErrors);
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -381,6 +364,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
+    setSkipping(true);
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
@@ -407,6 +391,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
+
+    setSkipping(true);
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
@@ -506,7 +492,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const updatePlaylistPlayable = (playlist,urlCollection) => {
+  const updatePlaylistPlayable = (playlist,mediaErrors) => {
     playlist = playlist.map((trackItem) => {
 
       const getUpdatedSources = (track) => {
@@ -514,17 +500,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           (sourceItem) => {
 
             const url = sourceItem.url;
-            const urlCollectionItem = urlCollection[url];
-
-            if (!urlCollectionItem) return sourceItem;
-
-            const urlPlayable = urlCollectionItem.playable;
-            const urlError = urlCollectionItem.error;
+            const mediaError = mediaErrors[url];
 
             return {
               ...sourceItem,
-              playable:urlPlayable,
-              error:urlError
+              playable:(sourceItem.supported && !mediaError),
+              error:mediaError
             }
           }
         )
@@ -590,24 +571,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const buildUrlCollection = (urls) => {
-    let collection = {};
-
-    urls.forEach(function(url){
-
-      const supported = ReactPlayer.canPlay(url);
-
-      collection[url] = {
-        playable:supported,
-        error:supported ? undefined : 'Not supported by ReactPlayer'
-      }
-
-    });
-
-    return collection;
-
-  }
-
   //update the "playing" state from props
   useEffect(()=>{
     if(typeof props.playing === 'undefined') return;
@@ -622,6 +585,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("***SET LOADING",loading);
   },[loading])
 
+  useEffect(()=>{
+    console.log("***SET SKIPPING",skipping);
+  },[skipping])
+
   //build our playlist based on the prop URLs
   useEffect(() => {
 
@@ -630,11 +597,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     /*
     Build Playlist
     */
-
-    //urls collection
-    let newUrlCollection = buildUrlCollection(props.urls);
-    newUrlCollection = {...newUrlCollection,...urlCollection};
-    setUrlCollection(newUrlCollection);
 
     //build a clean playlist based on an array of URLs
     const buildPlaylist = (urls) => {
@@ -665,11 +627,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
           }
 
-          const sortSourcesByAutoplay = (a,b) =>{
-            return b.autoplay - a.autoplay;
-          }
-
-          const sortSourcesByPlayable = (a,b) =>{
+          const sortPlayableSources = (a,b) =>{
             return b.playable - a.playable;
           }
 
@@ -678,29 +636,32 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
           let sources = urls.map(function(url,i) {
 
-            const isSourceProvider = (provider) => {
+            const provider = reactplayerProviders.find(provider => {
               return provider.canPlay(url);
-            }
-
-            const provider = reactplayerProviders.find(isSourceProvider);
+            });
 
             return {
               index:i,
               trackIndex:index,
               current:false,
-              playable:true,//default
+              supported:ReactPlayer.canPlay(url),
+              playable:undefined,
               url:url,
               error:undefined,
-              autoplay:provider ? !disabledProviders.includes(provider.key) : undefined,
+              disabled:provider ? disabledProviders.includes(provider.key) : undefined,
               provider:provider ? {name:provider.name,key:provider.key} : undefined,
               duration:undefined
             }
           });
 
-          //sort sources
+          //remove disabled sources
+          //TOUFIX should we send that data to a parent prop ?
+          sources = sources.filter(source => {
+            return !source.disabled;
+          });
 
-          sources = sources.sort(sortSourcesByPlayable);
-          sources = sources.sort(sortSourcesByAutoplay);
+          //sort sources
+          sources = sources.sort(sortPlayableSources);
           if (sortProviders){
             sources = sources.sort(sortSourcesByProvider);
           }
@@ -756,24 +717,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setIndices(props.index);
   }, [props.index]);
 
-  //update 'playable' properties
+  //update 'current' & 'playable' properties
   useEffect(() => {
     if (!didFirstInit) return;
-
     setPlaylist(prevState => {
-      return updatePlaylistPlayable(prevState,urlCollection);
+      let playlist = prevState;
+      playlist = updatePlaylistPlayable(prevState,mediaErrors);
+      playlist = updatePlaylistCurrent(prevState,indices);
+      return playlist;
     })
-
-  }, [urlCollection]);
-
-  //update 'current' properties
-  useEffect(() => {
-    if (!didFirstInit) return;
-    setLoading(true);
-    setPlaylist(prevState => {
-      return updatePlaylistCurrent(prevState,indices);
-    })
-  },[indices])
+  },[indices,mediaErrors])
 
   //update tracks history
   //TOUFIX TOUCHECK
@@ -829,6 +782,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const source = getCurrentSource(playlist);
     if (source){
+      setSkipping(false);
       if (url !== source.url){
           setUrl(source.url);
       }else{
