@@ -208,10 +208,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setBackwards(false);
 
-    //if we are not requesting a play,
-    //consider that 'loading' has finished when the player is ready.
-    if (!playRequest){
-      setLoading(false);
+    if (playRequest){
+      setLoading(true);
     }
 
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
@@ -223,6 +221,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
     if (!track || !source) return;
+
+    setLoading(false);
 
     //inherit React Player prop
     if (typeof props.onStart === 'function') {
@@ -569,6 +569,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[loading])
 
   useEffect(()=>{
+    if (skipping){
+      setLoading(true);
+    }
     console.log("***SET SKIPPING",skipping);
   },[skipping])
 
@@ -913,8 +916,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       playing={playRequest}
       controls={props.controls}
       light={props.light}
-      volume={props.volume}
-      muted={props.muted} //avoid bugs when loading
+      volume={loading ? 0 : props.volume}
+      muted={props.muted}
       playbackRate={props.playbackRate}
       width={props.width}
       height={props.height}
