@@ -470,11 +470,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const updatePlaylistPlayable = (playlist,mediaErrors,filters) => {
+  const updatePlaylistPlayable = (playlist,mediaErrors) => {
 
     if (!playlist.length) return playlist;
     mediaErrors = mediaErrors || [];
-    filters =  (typeof filters === 'undefined') ? true : filters;
 
     playlist = [...playlist].map((trackItem) => {
 
@@ -503,7 +502,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       //is the track playable ?
       trackItem.playable = (playableSources.length > 0);
       //allow to filter the playable value (only if it has been already set; so it does not run on first init).
-      if ( filters && (typeof props.filterPlayableTrack === 'function') ) {
+      if ( typeof props.filterPlayableTrack === 'function' ) {
         trackItem.playable = props.filterPlayableTrack(trackItem.playable,trackItem);
       }
 
