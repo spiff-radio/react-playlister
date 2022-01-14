@@ -45,9 +45,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to disable (remove the ones that does not exists in the original array)
   }
 
-  const sortProviders = getProvidersOrder(props.sortProviders);
-  const disabledProviders = getDisabledProviders(props.disabledProviders);
-
   //should we skip if an error is fired ?
   const skipError = props.skipError ?? true;
 
@@ -427,41 +424,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipSource(false);
   }
 
-  const sanitizeIndices = (indices,playlist) => {
-
-    if (!playlist) throw new Error("sanitizeIndices() requires a playlist to be defined.");
-
-    let trackIndex = undefined;
-    let sourceIndex = undefined;
-    const propIndices = Array.isArray(indices) ? indices : [indices];//force array
-
-    if (propIndices[0] !== undefined){
-      trackIndex = propIndices[0] ?? undefined;
-      sourceIndex = propIndices[1] ?? undefined;
-
-      const track = playlist[trackIndex] ?? undefined;
-      const source = track?.sources[sourceIndex] ?? undefined;
-
-      trackIndex = track ? trackIndex : undefined;
-      sourceIndex = source ? sourceIndex : undefined;
-
-    }
-
-    return [trackIndex,sourceIndex];
-
-  }
-
   const validateIndices = (indices,playlist)=>{
 
     if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
 
-    indices = sanitizeIndices(indices,playlist);
+    indices = Array.isArray(indices) ? indices : [indices];//force array
 
     let trackIndex = indices[0];
     let sourceIndex = indices[1];
 
-    let track = playlist[trackIndex];
-    let source = playlist[sourceIndex];
+    let track = playlist.find(function(track) {
+      return ( track.index === trackIndex );
+    });
+
+    let source = track?.sources.find(function(source) {
+      return ( source.index === sourceIndex );
+    });
 
     if (!track){
       track = getNextTrack(playlist);//default track
@@ -492,8 +470,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
-  const updatePlaylistPlayable = (playlist,mediaErrors) => {
-    playlist = playlist.map((trackItem) => {
+  const updatePlaylistPlayable = (playlist,mediaErrors,filters) => {
+
+    if (!playlist.length) return playlist;
+    mediaErrors = mediaErrors || [];
+    filters =  (typeof filters === 'undefined') ? true : filters;
+
+    playlist = [...playlist].map((trackItem) => {
 
       const getUpdatedSources = (track) => {
         return track.sources.map(
@@ -517,21 +500,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return source.playable;
       });
 
+      //is the track playable ?
       trackItem.playable = (playableSources.length > 0);
-
-      if (typeof props.filterPlayableTrack === 'function') {
+      //allow to filter the playable value (only if it has been already set; so it does not run on first init).
+      if ( filters && (typeof props.filterPlayableTrack === 'function') ) {
         trackItem.playable = props.filterPlayableTrack(trackItem.playable,trackItem);
       }
 
       return trackItem;
     });
-    DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES BASED ON URL COLLECTION",playlist);
+    DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES",playlist);
     return playlist;
   }
 
   const updatePlaylistCurrent = (playlist,indices) => {
 
-    if (!playlist) return;
+    if (!playlist.length) return playlist;
 
     indices = validateIndices(indices,playlist);
 
@@ -599,13 +583,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     */
 
     //build a clean playlist based on an array of URLs
-    const buildPlaylist = (urls) => {
+    const buildPlaylist = (urls,indices) => {
 
-      const buildTrack = (urls,track_index) => {
+      const sortProviders = getProvidersOrder(props.sortProviders);
+      const disabledProviders = getDisabledProviders(props.disabledProviders);
+
+      const buildTrack = (urls,url_index) => {
 
         //defaults
         let track = {
-          index:track_index,
+          index:url_index,
           current:undefined,
           playable:undefined,
           sources:[]
@@ -625,10 +612,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
             return aProviderKey - bProviderKey;
 
-          }
-
-          const sortPlayableSources = (a,b) =>{
-            return b.playable - a.playable;
           }
 
           urls = [].concat(urls || []);//force array (it might be a single URL string)
@@ -654,14 +637,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
             }
           });
 
-          //remove disabled sources
-          //TOUFIX should we send that data to a parent prop ?
+          //remove unsupported sources
+          sources = sources.filter(source => {
+            return source.supported;
+          });
+
+          //remove disabled providers sources
           sources = sources.filter(source => {
             return !source.disabled;
           });
 
           //sort sources
-          sources = sources.sort(sortPlayableSources);
           if (sortProviders){
             sources = sources.sort(sortSourcesByProvider);
           }
@@ -669,7 +655,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           return sources
         }
 
-        track.sources = buildTrackSources(track_index,urls);
+        track.sources = buildTrackSources(url_index,urls);
 
         //set default source
         const currentSource = getNextSource(track);
@@ -688,28 +674,33 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       urls = [].concat(urls || []);//force array
 
-      return urls.map(
+      let playlist = urls.map(
         (v, i) => {
           return buildTrack(v,i)
         }
       );
+
+      //remove unplayable tracks
+      playlist = updatePlaylistPlayable(playlist,undefined);
+      playlist = playlist.filter(track => {
+        return track.playable;
+      });
+
+      playlist = updatePlaylistCurrent(playlist,indices);
+
+      DEBUG && console.log("PLAYLIST BUILT WITH "+playlist.length+"/"+urls.length+" PLAYABLE TRACKS.",[...playlist],urls);
+
+      return playlist;
+
+
     }
-    let newPlaylist = buildPlaylist(props.urls);
+    const indices = !didFirstInit ? props.index : getCurrentIndices(playlist);
 
-    //set current prop
-    const indices = (!didFirstInit) ? props.index : getCurrentIndices(playlist);
-    setIndices(indices);
-
-    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST IS INITIALIZING WITH "+newPlaylist.length+" TRACKS.",newPlaylist);
+    let newPlaylist = buildPlaylist(props.urls,indices);
 
     setPlaylist(newPlaylist);
 
   }, [props.urls]);
-
-  //after first render
-  useEffect(() => {
-    setDidFirstInit(true);
-  }, []);
 
   //update indices from prop.
   useEffect(() => {
@@ -717,9 +708,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setIndices(props.index);
   }, [props.index]);
 
+  //after first render
+  useEffect(() => {
+    setDidFirstInit(true);
+  }, []);
+
   //update 'current' & 'playable' properties
   useEffect(() => {
-    if (!didFirstInit) return;
     setPlaylist(prevState => {
       let playlist = prevState;
       playlist = updatePlaylistPlayable(prevState,mediaErrors);
