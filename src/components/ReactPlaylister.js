@@ -208,9 +208,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setBackwards(false);
 
-    if (playRequest){
-      setLoading(true);
-    }
+    setLoading(playRequest);
 
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
 
@@ -569,9 +567,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[loading])
 
   useEffect(()=>{
-    if (skipping){
-      setLoading(true);
-    }
     console.log("***SET SKIPPING",skipping);
   },[skipping])
 
