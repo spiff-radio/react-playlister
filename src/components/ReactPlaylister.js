@@ -45,12 +45,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to disable (remove the ones that does not exists in the original array)
   }
 
-  //should we skip if an error is fired ?
-  const skipError = props.skipError ?? true;
-
-  //should we skip if the track ends ?
-  const skipEnded = props.skipEnded ?? true;
-
   //do we iterate URLs backwards ?
   //when a source fails, we need to know if we have to go backwards or not.
   const [backwards,setBackwards] = useState(false);
@@ -80,7 +74,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [url, setUrl] = useState();//url for ReactPlayer
 
   const [didFirstInit,setDidFirstInit] = useState(false);
-  const [indices,setIndices] = useState(false);
+  const [indices,setIndices] = useState(undefined);
 
   //build a queue of keys based on an array
   //If needle is NOT defined, it will return the full array.
@@ -206,11 +200,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onReady(player);
     }
 
-    setBackwards(false);
-
-    setLoading(playRequest);
-
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
+
+    setBackwards(false);
+    setLoading(playRequest);
 
   }
 
@@ -220,16 +213,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const source = getCurrentSource(playlist);
     if (!track || !source) return;
 
-    setLoading(false);
-
     //inherit React Player prop
     if (typeof props.onStart === 'function') {
       props.onStart(e);
     }
 
-
-
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" STARTED",source.url);
+
+    setSkipping(false);
+  }
+
+  const setSourceError = (source,error) => {
+
+    console.log("REACTPLAYLISTER / POPULATE TRACK #"+source.trackIndex+" SOURCE #"+source.index+" ERROR",error);
+
+    //urls collection
+    const newMediaErrors = {
+      ...mediaErrors,
+      [source.url]:error
+    }
+
+    setMediaErrors(newMediaErrors);
   }
 
   const handleSourceError = (e) => {
@@ -237,15 +241,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const source = getCurrentSource(playlist);
     const sourceUrl = source.url;
 
-    console.log("REACTPLAYLISTER / ERROR PLAYING MEDIA",sourceUrl);
-
-    //urls collection
-    const newMediaErrors = {
-      ...mediaErrors,
-      [sourceUrl]:'Error while playing media'
-    }
-
-    setMediaErrors(newMediaErrors);
+    setSourceError(source,'Error while playing media');
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -253,7 +249,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     //skip automatically if the player is playing
-    if (playRequest && skipError){
+    if (playRequest){
       skipSource();
     }
 
@@ -278,7 +274,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if ( (track === lastTrack) ) { //tell parent the last played track has ended
       handlePlaylistEnded();
-    }else if(skipEnded){//skip to next track
+    }else{//skip to next track
       nextTrack();
     }
 
@@ -310,8 +306,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPause();
     }
 
-    setPlayRequest(false);
-    setLoading(false);
+    if (!skipping){ //<--statement for bugfix.  Sometimes, ReactPlayer fire this event after the media is ready.
+      setPlayRequest(false);
+      setLoading(false);
+    }
+
 
     setControls(prevState => {
       return{
@@ -349,6 +348,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const handlePlaylistEnded = () => {
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST ENDED");
+    setPlayRequest(false);
     if(typeof props.onPlaylistEnded === 'function'){
       props.onPlaylistEnded();
     }
@@ -359,7 +359,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
-    setSkipping(true);
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
@@ -386,8 +385,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //update the backwards state if it changes
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
-
-    setSkipping(true);
 
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
@@ -557,6 +554,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     if(typeof props.playing === 'undefined') return;
     setPlayRequest(props.playing);
   },[props.playing])
+
+  useEffect(() => {
+    console.log("***SET INDICES",indices);
+    if (indices !== undefined){
+      setSkipping(true);
+    }
+  },[indices])
 
   useEffect(()=>{
     console.log("***SET PLAY REQUEST",playRequest);
@@ -774,7 +778,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const source = getCurrentSource(playlist);
     if (source){
-      setSkipping(false);
       if (url !== source.url){
           setUrl(source.url);
       }else{
