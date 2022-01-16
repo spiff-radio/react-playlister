@@ -32,6 +32,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
   const autoskip = props.autoskip ?? true;
+  const sourceNotStartingTimeOutMs = 10000;
 
   const getProvidersOrder = (keys) => {
     keys = keys || ['file'];
@@ -75,6 +76,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [didFirstInit,setDidFirstInit] = useState(false);
   const [indices,setIndices] = useState(undefined);
+
+  const [sourceStartTimeout,setSourceStartTimeout] = useState(undefined);
 
   //build a queue of keys based on an array
   //If needle is NOT defined, it will return the full array.
@@ -205,6 +208,20 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setBackwards(false);
     setLoading(playRequest);
 
+
+    //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
+    //without having an error fired.
+    //So let's hack this with a timeout.
+    /*
+    TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
+    if (playRequest){
+      const timer = setTimeout(() => {
+        setSourceError(source,'Media failed to play after '+sourceNotStartingTimeOutMs+' ms');
+        skipSource();
+      }, sourceNotStartingTimeOutMs);
+      setSourceStartTimeout(timer);
+    }
+    */
   }
 
   const handleSourceStart = (e) => {
@@ -221,6 +238,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" STARTED",source.url);
 
     setSkipping(false);
+    clearTimeout(sourceStartTimeout);
+
   }
 
   const setSourceError = (source,error) => {
