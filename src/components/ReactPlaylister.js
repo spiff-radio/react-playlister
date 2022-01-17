@@ -629,14 +629,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(()=>{
     //Some native players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...) without having an error fired.
     //So let's hack this with a timeout.
-    //https://github.com/cookpete/react-player/issues/1067
+    //https://github.com/cookpete/react-player/issues/1382
 
     if (!sourceReady) return;
     if (!playRequest) return;
 
     const cleanIndices = validateIndices(indices,playlist);//clean our input indices to compare to the sourceReady indices
     const isRequestedIndices = ( (sourceReady.trackIndex === cleanIndices[0]) && (sourceReady.index === cleanIndices[1]) );
-
     if (!isRequestedIndices) return;
 
     setStartSourceTimeout(sourceReady);
