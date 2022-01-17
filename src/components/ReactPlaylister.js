@@ -212,8 +212,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
     //without having an error fired.
     //So let's hack this with a timeout.
-    /*
-    TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
+    //TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
     if (playRequest){
       const timer = setTimeout(() => {
         setSourceError(source,'Media failed to play after '+sourceNotStartingTimeOutMs+' ms');
@@ -221,7 +220,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }, sourceNotStartingTimeOutMs);
       setSourceStartTimeout(timer);
     }
-    */
   }
 
   const handleSourceStart = (e) => {
@@ -415,7 +413,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return;
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM SOURCE -> SOURCE",source,newSource);
+    DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+source.trackIndex+" SOURCE #"+source.index+" TO TRACK #"+newSource.trackIndex+" SOURCE #"+newSource.index);
 
     setIndices([track.index,newSource.index]);
 
