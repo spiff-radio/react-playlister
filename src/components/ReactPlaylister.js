@@ -77,7 +77,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [didFirstInit,setDidFirstInit] = useState(false);
   const [indices,setIndices] = useState(undefined);
 
-  const [sourceStartTimeout,setSourceStartTimeout] = useState(undefined);
+  const [sourceReady,setSourceReady] = useState(undefined);
+  const [sourceStarted,setSourceStarted] = useState(undefined);
+  const sourceStartTimeout = useRef(undefined);
 
   //build a queue of keys based on an array
   //If needle is NOT defined, it will return the full array.
@@ -192,6 +194,39 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queue[0];
   }
 
+  //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
+  //without having an error fired.
+  //So let's hack this with a timeout.
+  //TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
+  const setStartSourceTimeout = source => {
+
+    if (!source) return;
+    if (sourceStartTimeout.current) return;//a timeout has already been registered and has not been cleared yet; abord.
+
+    const msSkipTime = Date.now() + sourceNotStartingTimeOutMs;
+    const skipTime = new Date(msSkipTime);
+    const humanSkipTime = skipTime.getHours() + ":" + skipTime.getMinutes() + ":" + skipTime.getSeconds();
+    console.log("REACTPLAYLISTER / INITIALIZE A START TIMEOUT FOR TRACK #"+source.trackIndex+" SOURCE #"+source.index+" : IF IT HAS NOT STARTED AT "+humanSkipTime+", IT WILL BE SKIPPED.");
+    const timer = setTimeout(() => {
+      const time = new Date();
+      const humanTime = time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds();
+      console.log("REACTPLAYLISTER / TIMEOUT ENDED FOR TRACK #"+source.trackIndex+" SOURCE #"+source.index+" AND SOURCE HAS NOT STARTED PLAYING.  IT IS NOW "+humanTime+", SKIP SOURCE!");
+      setSourceError(source,'Media failed to play after '+sourceNotStartingTimeOutMs+' ms');
+      skipSource();
+    }, sourceNotStartingTimeOutMs);
+    sourceStartTimeout.current = timer;
+  }
+
+  const clearStartSourceTimeout = () => {
+    if (!sourceStartTimeout.current) return;
+
+    var now = new Date();
+    var time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+    console.log("REACTPLAYLISTER / CLEARED START TIMEOUT AT "+time);
+    clearTimeout(sourceStartTimeout.current);
+    sourceStartTimeout.current = undefined;
+  }
+
   const handleSourceReady = (player) => {
 
     const track = getCurrentTrack(playlist);
@@ -203,23 +238,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onReady(player);
     }
 
-    console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" READY",source.url);
+    setSourceReady(source);
 
-    setBackwards(false);
-    setLoading(playRequest);
-
-
-    //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
-    //without having an error fired.
-    //So let's hack this with a timeout.
-    //TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
-    if (playRequest){
-      const timer = setTimeout(() => {
-        setSourceError(source,'Media failed to play after '+sourceNotStartingTimeOutMs+' ms');
-        skipSource();
-      }, sourceNotStartingTimeOutMs);
-      setSourceStartTimeout(timer);
-    }
   }
 
   const handleSourceStart = (e) => {
@@ -233,10 +253,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onStart(e);
     }
 
-    console.log("REACTPLAYLISTER / TRACK #"+track.index+" SOURCE #"+source.index+" STARTED",source.url);
-
-    setSkipping(false);
-    clearTimeout(sourceStartTimeout);
+    setSourceStarted(source);
 
   }
 
@@ -565,30 +582,95 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
+  /*
+  States relationships
+  */
+
+  useEffect(() => {
+    if (indices !== undefined){
+      clearStartSourceTimeout();
+      setSourceReady(undefined);
+      setSourceStarted(undefined);
+      setLoading(true);
+      setSkipping(true);
+    }
+  },[indices])
+
+  useEffect(()=>{
+    if (skipping){
+
+    }else{
+      setBackwards(false);
+    }
+  },[skipping])
+
   //update the "playing" state from props
   useEffect(()=>{
     if(typeof props.playing === 'undefined') return;
     setPlayRequest(props.playing);
   },[props.playing])
 
-  useEffect(() => {
-    console.log("***SET INDICES",indices);
-    if (indices !== undefined){
-      setSkipping(true);
+  useEffect(()=>{
+    if (sourceReady){
+      //if we're requesting play, loading should be set to true until media starts.
+      //if we're not requesting play, loading is now finished.
+      setLoading(playRequest);
     }
+  },[sourceReady])
+
+  useEffect(()=>{
+    if (sourceStarted){
+      setSkipping(false);
+      setSourceReady(undefined);//because some hooks rely on >> sourceReady && !sourceStarted
+      clearStartSourceTimeout();
+    }
+  },[sourceStarted])
+
+  useEffect(()=>{
+    //Some native players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...) without having an error fired.
+    //So let's hack this with a timeout.
+    //https://github.com/cookpete/react-player/issues/1067
+
+    if (!sourceReady) return;
+    if (!playRequest) return;
+
+    const cleanIndices = validateIndices(indices,playlist);//clean our input indices to compare to the sourceReady indices
+    const isRequestedIndices = ( (sourceReady.trackIndex === cleanIndices[0]) && (sourceReady.index === cleanIndices[1]) );
+
+    if (!isRequestedIndices) return;
+
+    setStartSourceTimeout(sourceReady);
+
+  },[sourceReady,playRequest])
+
+  /*
+  States feedback
+  */
+  useEffect(() => {
+    DEBUG && console.log("REACTPLAYLISTER / STATE INDICES",indices);
   },[indices])
 
   useEffect(()=>{
-    console.log("***SET PLAY REQUEST",playRequest);
+    DEBUG && console.log("REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
   },[playRequest])
 
   useEffect(()=>{
-    console.log("***SET LOADING",loading);
+    DEBUG && console.log("REACTPLAYLISTER / STATE LOADING",loading);
   },[loading])
 
   useEffect(()=>{
-    console.log("***SET SKIPPING",skipping);
+    DEBUG && console.log("REACTPLAYLISTER / STATE SKIPPING",skipping);
   },[skipping])
+
+  useEffect(()=>{
+    if (!sourceReady) return;
+    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+sourceReady.trackIndex+" SOURCE #"+sourceReady.index+" READY",sourceReady.url);
+  },[sourceReady])
+
+  useEffect(()=>{
+    if (!sourceStarted) return;
+    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+sourceStarted.trackIndex+" SOURCE #"+sourceStarted.index+" STARTED",sourceStarted.url);
+  },[sourceStarted])
 
   //build our playlist based on the prop URLs
   useEffect(() => {
@@ -600,7 +682,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     */
 
     //build a clean playlist based on an array of URLs
-    const buildPlaylist = (urls,indices) => {
+    const buildPlaylist = (urls) => {
 
       const sortProviders = getProvidersOrder(props.sortProviders);
       const disabledProviders = getDisabledProviders(props.disabledProviders);
@@ -703,19 +785,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         return track.playable;
       });
 
-      playlist = updatePlaylistCurrent(playlist,indices);
-
       DEBUG && console.log("PLAYLIST BUILT WITH "+playlist.length+"/"+urls.length+" PLAYABLE TRACKS.",[...playlist],urls);
 
       return playlist;
 
 
     }
+    let newPlaylist = buildPlaylist(props.urls);
+
     const indices = !didFirstInit ? props.index : getCurrentIndices(playlist);
 
-    let newPlaylist = buildPlaylist(props.urls,indices);
-
     setPlaylist(newPlaylist);
+    setIndices(indices);
 
   }, [props.urls]);
 
