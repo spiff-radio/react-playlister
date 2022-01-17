@@ -258,7 +258,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const handleSourceError = (e) => {
 
     const source = getCurrentSource(playlist);
-    const sourceUrl = source.url;
 
     setSourceError(source,'Error while playing media');
 
