@@ -811,6 +811,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //update 'current' & 'playable' properties
   useEffect(() => {
+    if (!didFirstInit) return;
     setPlaylist(prevState => {
       let playlist = prevState;
       playlist = updatePlaylistPlayable(prevState,mediaErrors);
@@ -829,6 +830,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const trackIndex = track.index;
 
+    //append to history only if this differs from last item.
     const lastItem = trackHistory[trackHistory.length - 1];
     if (lastItem === trackIndex) return;
 
