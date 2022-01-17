@@ -597,9 +597,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[indices])
 
   useEffect(()=>{
-    if (skipping){
-
-    }else{
+    if (!skipping){
       setBackwards(false);
     }
   },[skipping])
@@ -619,14 +617,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[sourceReady])
 
   useEffect(()=>{
-    if (sourceStarted){
-      setSkipping(false);
-      setSourceReady(undefined);//because some hooks rely on >> sourceReady && !sourceStarted
-      clearStartSourceTimeout();
-    }
-  },[sourceStarted])
-
-  useEffect(()=>{
     //Some native players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...) without having an error fired.
     //So let's hack this with a timeout.
     //https://github.com/cookpete/react-player/issues/1382
@@ -641,6 +631,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setStartSourceTimeout(sourceReady);
 
   },[sourceReady,playRequest])
+
+  useEffect(()=>{
+    if (sourceStarted){
+      setLoading(false);
+      setSkipping(false);
+      setSourceReady(undefined);//because some hooks rely on >> sourceReady && !sourceStarted
+      clearStartSourceTimeout();
+    }
+  },[sourceStarted])
 
   /*
   States feedback
