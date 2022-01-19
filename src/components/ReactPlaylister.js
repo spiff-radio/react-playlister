@@ -22,6 +22,7 @@ export const getCurrentIndices = (playlist) => {
   return [track?.index,source?.index];
 }
 
+//converts an indices string into an array
 const indicesFromString = (indicesString) => {
   let arr =  (indicesString !== undefined) ? indicesString.split(":") : [];
   arr = arr.filter(e =>  e); //remove empty values
@@ -39,9 +40,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
   const autoskip = props.autoskip ?? true;
-  const ignoreUnsupportedUrls = props.ignoreUnsupportedUrls ?? true;
-  const ignoreDisabledUrls = props.ignoreDisabledUrls ?? true;
-  const ignoreEmptyUrls = props.ignoreEmptyUrls ?? true;
+  const ignoreUnsupportedUrls = props.ignoreUnsupportedUrls ?? true;//remove sources that are not supported by React Player
+  const ignoreDisabledUrls = props.ignoreDisabledUrls ?? true;//remove sources that have their providers disabled
+  const ignoreEmptyUrls = props.ignoreEmptyUrls ?? true; //remove tracks that have no sources
 
   const sourceNotStartingTimeOutMs = 7000;
 
@@ -338,9 +339,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPlay();
     }
 
-    setPlayRequest(true);
+    setPlayRequest(true);//align our state
     setPlayLoading(false);
-
 
     setControls(prevState => {
       return{
@@ -357,9 +357,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPause();
     }
 
-    if (!skipping){ //<--statement for bugfix.  Sometimes, ReactPlayer fire this event after the media is ready.
-      setPlayRequest(false);
-      setPlayLoading(false);
+    //<--TOUFIX TOUCHECK USEFUL ?
+    //!skipping : bugfix:  Sometimes, ReactPlayer fire this event after the media is ready.
+    //playLoading; when buffering
+    if (!skipping && !playLoading){
+      setPlayRequest(false);//align our state
     }
 
 
@@ -577,22 +579,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(()=>{
     if(typeof props.playing === 'undefined') return;
     setPlayRequest(props.playing);
+    setPlayLoading(props.playing);
   },[props.playing])
 
-  useEffect(()=>{
-    if (playRequest){
-      setPlayLoading(true);
-    }
-  },[playRequest])
-
-  //startLoading - if we're requesting play, should be set to TRUE until media starts.
+  //Media is loaded and requested - await that it starts !
   useEffect(()=>{
     if (mediaLoaded && playRequest){
       setStartLoading(true);
     }
   },[mediaLoaded])
 
-  //startLoading - FALSE when the media starts.
+  //Media has started
   useEffect(()=>{
     if (mediaStarted){
       setStartLoading(false);
@@ -784,7 +781,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         }
       );
 
-      //remove tracks that have no sources
       if (ignoreEmptyUrls){
         playlist = playlist.filter(track => {
           return (track.sources.length > 0);
