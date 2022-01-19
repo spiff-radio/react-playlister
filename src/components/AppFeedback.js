@@ -30,8 +30,12 @@ export const AppFeedback = props => {
           <Label color="teal">{source.provider.name}</Label>
         }
         {
+          source.disabled &&
+          <Label color="orange">disabled</Label>
+        }
+        {
           !source.playable &&
-          <Label color="red" title={source.error}>not playable</Label>
+          <Label color="red" title={source.error}>error</Label>
         }
         {
           props.selected &&

@@ -22,6 +22,13 @@ export const getCurrentIndices = (playlist) => {
   return [track?.index,source?.index];
 }
 
+const indicesFromString = (indicesString) => {
+  let arr =  (indicesString !== undefined) ? indicesString.split(":") : [];
+  arr = arr.filter(e =>  e); //remove empty values
+  arr = arr.map(e =>  parseInt(e)); //convert to integers
+  return arr;
+}
+
 const DEBUG = (process.env.NODE_ENV !== 'production');
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 
@@ -32,7 +39,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
   const autoskip = props.autoskip ?? true;
-  const sourceNotStartingTimeOutMs = 10000;
+  const ignoreUnsupportedUrls = props.ignoreUnsupportedUrls ?? true;
+  const ignoreDisabledUrls = props.ignoreDisabledUrls ?? true;
+  const ignoreEmptyUrls = props.ignoreEmptyUrls ?? true;
+
+  const sourceNotStartingTimeOutMs = 7000;
 
   const getProvidersOrder = (keys) => {
     keys = keys || ['file'];
@@ -51,10 +62,21 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [backwards,setBackwards] = useState(false);
 
   const [playRequest,setPlayRequest] = useState(false);
-  const [loading,setLoading] = useState(false);
+
+  const [mediaLoaded,setMediaLoaded] = useState(false);
+  const [mediaStarted,setMediaStarted] = useState(false);
+
+  //loaders
   const [skipping,setSkipping] = useState(false);
+  const [sourceLoading,setSourceLoading] = useState(false);
+  const [playLoading,setPlayLoading] = useState(false);
+  const [startLoading,setStartLoading] = useState(false);
+  const [loading,setLoading] = useState(false);
+
 
   const [playlist,setPlaylist] = useState();//our (transformed) datas
+  //how many times our playlist has been updated
+  const [loadCount,setLoadCount] = useState(0);
 
   //object containing each playlist URL (as properties);
   //with its playable / error status
@@ -72,13 +94,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     loading:false,
   });
 
+  const [indices,setIndices] = useState(undefined);
+  //since our 'indices' state is an array, it will be considered as updated even if its values are the same. So use a string instead, with a separator.
+  const [indicesString,setIndicesString] = useState(undefined);
+
   const [url, setUrl] = useState();//url for ReactPlayer
 
-  const [didFirstInit,setDidFirstInit] = useState(false);
-  const [indices,setIndices] = useState(undefined);
-
-  const [sourceReady,setSourceReady] = useState(undefined);
-  const [sourceStarted,setSourceStarted] = useState(undefined);
   const sourceStartTimeout = useRef(undefined);
 
   //build a queue of keys based on an array
@@ -169,24 +190,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queue[0];
   }
 
-  const filterSource = (source) => {
-
-    if (source === undefined) return false;
-
-    if (autoskip){
-
-      if (!source.playable){
-        return false;
-      }
-
-    }
-
-    return true;
-  }
-
   const getSourcesQueue = (track,source,loop,backwards) => {
     let queue = getArrayQueue(track?.sources,source,loop,backwards);
-    return queue.filter(filterSource);
+    return queue.filter(source=>{
+      if (autoskip){
+        if (!source.playable || source.disabled){
+          return false;
+        }
+        return true;
+      }
+    });
   }
 
   const getNextSource = (track,source,loop,backwards) => {
@@ -197,16 +210,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
   //without having an error fired.
   //So let's hack this with a timeout.
-  //TOUFIX TOUCHECK NOT WORKING ON BACKGROUND TABS
   const setStartSourceTimeout = source => {
 
-    if (!source) return;
+    if (!source) throw new Error("Missing source.");
     if (sourceStartTimeout.current) return;//a timeout has already been registered and has not been cleared yet; abord.
 
     const msSkipTime = Date.now() + sourceNotStartingTimeOutMs;
     const skipTime = new Date(msSkipTime);
     const humanSkipTime = skipTime.getHours() + ":" + skipTime.getMinutes() + ":" + skipTime.getSeconds();
     console.log("REACTPLAYLISTER / INITIALIZE A START TIMEOUT FOR TRACK #"+source.trackIndex+" SOURCE #"+source.index+" : IF IT HAS NOT STARTED AT "+humanSkipTime+", IT WILL BE SKIPPED.");
+
     const timer = setTimeout(() => {
       const time = new Date();
       const humanTime = time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds();
@@ -215,6 +228,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       skipSource();
     }, sourceNotStartingTimeOutMs);
     sourceStartTimeout.current = timer;
+
   }
 
   const clearStartSourceTimeout = () => {
@@ -238,7 +252,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onReady(player);
     }
 
-    setSourceReady(source);
+    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+source.trackIndex+" SOURCE #"+source.index+" READY",source.url);
+
+    setMediaLoaded(true);
 
   }
 
@@ -253,7 +269,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onStart(e);
     }
 
-    setSourceStarted(source);
+    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+source.trackIndex+" SOURCE #"+source.index+" STARTED",source.url);
+
+    setMediaStarted(true);
 
   }
 
@@ -321,7 +339,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setPlayRequest(true);
-    setLoading(false);
+    setPlayLoading(false);
 
 
     setControls(prevState => {
@@ -341,7 +359,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!skipping){ //<--statement for bugfix.  Sometimes, ReactPlayer fire this event after the media is ready.
       setPlayRequest(false);
-      setLoading(false);
+      setPlayLoading(false);
     }
 
 
@@ -362,6 +380,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     const source = getCurrentSource(playlist);
+
+    //TOUFIX TOUCHECK : sometimes source is not ready ?
+    if (!source){
+      console.log("error while trying to set source duration : no source");
+      return;
+    }
+
     source.duration = duration * 1000; //in ms
 
     //TOUFIX TOUCHECK should we update the track duration too ?
@@ -375,8 +400,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onBuffer();
     }
 
-    setLoading(true);
+    setPlayLoading(true);
 
+  }
+
+  const rewindMedia = () => {
+    //if that source has already played, resets it.
+    const played = reactPlayerRef.current.getCurrentTime();
+
+    if (played){
+      DEBUG && console.log("REACTPLAYLISTER / REWIND MEDIA");
+      reactPlayerRef.current.seekTo(0);
+    }
   }
 
   const handlePlaylistEnded = () => {
@@ -393,7 +428,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     goBackwards = (goBackwards !== undefined) ? goBackwards : backwards;
     setBackwards(goBackwards);
 
-    const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
+    const backwardsMsg = goBackwards ? 'TO PREVIOUS' : 'TO NEXT';
 
     const currentTrack = getCurrentTrack(playlist);
     const newTrack = getNextTrack(playlist,currentTrack,loop,goBackwards);
@@ -401,7 +436,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (newTrack){
 
-      DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+backwardsMsg,newTrackIndex);
+      DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+backwardsMsg+" TRACK #"+newTrackIndex);
 
       setIndices(newTrackIndex);
 
@@ -452,52 +487,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipSource(false);
   }
 
-  const validateIndices = (indices,playlist)=>{
-
-    if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
-
-    indices = Array.isArray(indices) ? indices : [indices];//force array
-
-    let trackIndex = indices[0];
-    let sourceIndex = indices[1];
-
-    let track = playlist.find(function(track) {
-      return ( track.index === trackIndex );
-    });
-
-    let source = track?.sources.find(function(source) {
-      return ( source.index === sourceIndex );
-    });
-
-    if (!track){
-      track = getNextTrack(playlist);//default track
-    }
-
-    if (!source && track){
-
-      //last selected source
-      let currentSource = track.sources.find(function(source) {
-        return ( source.current === true );
-      });
-
-      //ensure it can be played
-      currentSource = filterSource(currentSource) ? currentSource : undefined;
-
-      //first available source
-      const firstSource = getNextSource(track);
-
-      if (currentSource || firstSource){
-        source = currentSource ? currentSource : firstSource;
-      }
-    }
-
-    trackIndex = track ? track.index : undefined;
-    sourceIndex = source ? source.index : undefined;
-
-    return [trackIndex,sourceIndex];
-
-  }
-
   const updatePlaylistPlayable = (playlist,mediaErrors) => {
 
     if (!playlist.length) return playlist;
@@ -544,8 +533,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!playlist.length) return playlist;
 
-    indices = validateIndices(indices,playlist);
-
     const trackIndex = indices[0];
     const sourceIndex = indices[1];
 
@@ -586,101 +573,114 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   States relationships
   */
 
-  useEffect(() => {
-    if (indices !== undefined){
-      clearStartSourceTimeout();
-      setSourceReady(undefined);
-      setSourceStarted(undefined);
-      setLoading(true);
-      setSkipping(true);
-    }
-  },[indices])
-
-  useEffect(()=>{
-    if (!skipping){
-      setBackwards(false);
-    }
-  },[skipping])
-
   //update the "playing" state from props
   useEffect(()=>{
     if(typeof props.playing === 'undefined') return;
     setPlayRequest(props.playing);
   },[props.playing])
 
+
+  //startLoading - if we're requesting play, should be set to TRUE until media starts.
   useEffect(()=>{
-    if (sourceReady){
-      //if we're requesting play, loading should be set to true until media starts.
-      //if we're not requesting play, loading is now finished.
-      setLoading(playRequest);
+    if (mediaLoaded && playRequest){
+      setStartLoading(true);
     }
-  },[sourceReady])
+  },[mediaLoaded])
 
+  //startLoading - FALSE when the media starts.
   useEffect(()=>{
-    //Some native players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...) without having an error fired.
-    //So let's hack this with a timeout.
-    //https://github.com/cookpete/react-player/issues/1382
+    if (mediaStarted){
+      setStartLoading(false);
+    }
+  },[mediaStarted])
 
-    if (!sourceReady) return;
-    if (!playRequest) return;
-
-    const cleanIndices = validateIndices(indices,playlist);//clean our input indices to compare to the sourceReady indices
-    const isRequestedIndices = ( (sourceReady.trackIndex === cleanIndices[0]) && (sourceReady.index === cleanIndices[1]) );
-    if (!isRequestedIndices) return;
-
-    setStartSourceTimeout(sourceReady);
-
-  },[sourceReady,playRequest])
-
+  //has the skipping ended ?
+  //either the media is loaded and there is no play request
+  //either the media has started.
   useEffect(()=>{
-    if (sourceStarted){
-      setLoading(false);
+    const stopSkip = ( (mediaLoaded && !playRequest) || mediaStarted );
+    if (stopSkip){
       setSkipping(false);
-      setSourceReady(undefined);//because some hooks rely on >> sourceReady && !sourceStarted
+    }
+  },[mediaLoaded,mediaStarted])
+
+  //if the skipping has ended, then reset the backwards state.
+  useEffect(()=>{
+    if (!skipping){
+      setBackwards(false);
+    }
+  },[skipping])
+
+  //sourceLoading - TRUE if the media is not loaded yet while we request it to play.
+  useEffect(()=>{
+    const bool = (playRequest && !mediaLoaded);
+    setSourceLoading(bool);
+  },[playRequest,mediaLoaded])
+
+  //Set a start timeout if we're requesting a media to play; and it has not started yet
+  useEffect(()=>{
+
+    const source = getCurrentSource(playlist);
+    if (!source) return;
+
+    const bool = (playRequest && !sourceLoading && !mediaStarted);
+    if (!bool) return;
+
+    setStartSourceTimeout(source);
+  },[playRequest,sourceLoading,url])
+
+  //clear START timeout once the media has started.
+  useEffect(()=>{
+    if (mediaStarted){
       clearStartSourceTimeout();
     }
-  },[sourceStarted])
+  },[mediaStarted])
+
+  //set main loader
+  useEffect(()=>{
+    const bool = (skipping || sourceLoading || startLoading || playLoading);
+    setLoading(bool);
+  },[skipping,sourceLoading,startLoading,playLoading])
 
   /*
   States feedback
   */
   useEffect(() => {
-    DEBUG && console.log("REACTPLAYLISTER / STATE INDICES",indices);
-  },[indices])
+    const indices = indicesFromString(indicesString);
+    DEBUG && console.log("REACTPLAYLISTER / STATE INDICES UPDATED",indices);
+  },[indicesString])
 
   useEffect(()=>{
-    DEBUG && console.log("REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
+    DEBUG && console.log("***REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
   },[playRequest])
 
   useEffect(()=>{
-    DEBUG && console.log("REACTPLAYLISTER / STATE LOADING",loading);
+    DEBUG && console.log("REACTPLAYLISTER / STATE LOADING",loading,{
+      skipping:skipping,
+      sourceLoading:sourceLoading,
+      startLoading:startLoading,
+      playLoading:playLoading
+    });
   },[loading])
-
-  useEffect(()=>{
-    DEBUG && console.log("REACTPLAYLISTER / STATE SKIPPING",skipping);
-  },[skipping])
-
-  useEffect(()=>{
-    if (!sourceReady) return;
-    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+sourceReady.trackIndex+" SOURCE #"+sourceReady.index+" READY",sourceReady.url);
-  },[sourceReady])
-
-  useEffect(()=>{
-    if (!sourceStarted) return;
-    DEBUG && console.log("REACTPLAYLISTER / TRACK #"+sourceStarted.trackIndex+" SOURCE #"+sourceStarted.index+" STARTED",sourceStarted.url);
-  },[sourceStarted])
 
   //build our playlist based on the prop URLs
   useEffect(() => {
 
     if (!props.urls) return;
 
+    //reset
+    setSkipping(false);
+    setStartLoading(false);
+    setPlayLoading(false);
+    setSourceLoading(false);
+
     /*
     Build Playlist
     */
-
     //build a clean playlist based on an array of URLs
-    const buildPlaylist = (urls) => {
+    const buildPlaylist = (trackUrls,indices) => {
+
+      trackUrls = [].concat(trackUrls || []);//force array
 
       const sortProviders = getProvidersOrder(props.sortProviders);
       const disabledProviders = getDisabledProviders(props.disabledProviders);
@@ -735,14 +735,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
           });
 
           //remove unsupported sources
-          sources = sources.filter(source => {
-            return source.supported;
-          });
+          if (ignoreUnsupportedUrls){
+            sources = sources.filter(source => {
+              return source.supported;
+            });
+          }
 
           //remove disabled providers sources
-          sources = sources.filter(source => {
-            return !source.disabled;
-          });
+          if (ignoreDisabledUrls){
+            sources = sources.filter(source => {
+              return !source.disabled;
+            });
+          }
 
           //sort sources
           if (sortProviders){
@@ -769,56 +773,158 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       }
 
-      urls = [].concat(urls || []);//force array
-
-      let playlist = urls.map(
+      let playlist = trackUrls.map(
         (v, i) => {
           return buildTrack(v,i)
         }
       );
 
-      //remove unplayable tracks
-      playlist = updatePlaylistPlayable(playlist,undefined);
-      playlist = playlist.filter(track => {
-        return track.playable;
-      });
-
-      DEBUG && console.log("PLAYLIST BUILT WITH "+playlist.length+"/"+urls.length+" PLAYABLE TRACKS.",[...playlist],urls);
+      //remove tracks that have no sources
+      if (ignoreEmptyUrls){
+        playlist = playlist.filter(track => {
+          return (track.sources.length > 0);
+        });
+      }
 
       return playlist;
 
 
     }
-    let newPlaylist = buildPlaylist(props.urls);
 
-    const indices = !didFirstInit ? props.index : getCurrentIndices(playlist);
+    //get initial source errors (unsupported or disabled sources)
+    const getInitialPlaylistErrors = playlist => {
+      let errors = {};
+      const allSources = playlist.map(track => track.sources).flat(Infinity);
+      const unsupportedSources = allSources.filter(source => !source.supported);
+
+      unsupportedSources.forEach(function(source){
+        const url = source.url;
+        errors[url] = 'URL not supported';
+      });
+
+      return errors;
+    }
+
+    const indices = !loadCount ? props.index : getCurrentIndices(playlist);
+    let newPlaylist = buildPlaylist(props.urls,indices);
+
+    const initialMediaErrors = getInitialPlaylistErrors(newPlaylist);
+    const newMediaErrors = {...mediaErrors,...initialMediaErrors};
+
+    newPlaylist = updatePlaylistPlayable(newPlaylist,newMediaErrors);//set 'playable'
+    newPlaylist = updatePlaylistCurrent(newPlaylist,indices);//set 'current'
+
+    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST BUILT WITH "+newPlaylist.length+" TRACKS.",[...newPlaylist]);
+    DEBUG && console.log("REACTPLAYLISTER / PLAYLIST LOADED WITH INDICES",indices);
 
     setPlaylist(newPlaylist);
+    setMediaErrors(newMediaErrors);
     setIndices(indices);
+    setLoadCount(loadCount+1);
 
   }, [props.urls]);
 
   //update indices from prop.
   useEffect(() => {
-    if (!didFirstInit) return;
+    if (!loadCount) return;
     setIndices(props.index);
   }, [props.index]);
 
-  //after first render
+  //validate our indices
   useEffect(() => {
-    setDidFirstInit(true);
-  }, []);
+    if (!loadCount) return;
 
-  //update 'current' & 'playable' properties
+    const validateIndices = (indices,playlist)=>{
+
+      if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
+
+      indices = Array.isArray(indices) ? indices : [indices];//force array
+
+      let trackIndex = indices[0];
+      let sourceIndex = indices[1];
+
+      let track = playlist.find(function(track) {
+        return ( track.index === trackIndex );
+      });
+
+      let source = track?.sources.find(function(source) {
+        return ( source.index === sourceIndex );
+      });
+
+      if (!track){
+        track = getNextTrack(playlist);//default track
+      }
+
+      if (!source && track){
+
+        //last selected source
+        let currentSource = track.sources.find(function(source) {
+          return ( source.current === true );
+        });
+
+        //ensure it can be played
+        currentSource = (currentSource && currentSource.playable) ? currentSource : undefined;
+
+        //first available source
+        const firstSource = getNextSource(track);
+
+        if (currentSource || firstSource){
+          source = currentSource ? currentSource : firstSource;
+        }
+      }
+
+      trackIndex = track ? track.index : undefined;
+      sourceIndex = source ? source.index : undefined;
+
+      indices = [trackIndex,sourceIndex].filter(function(x) {
+        return x !== undefined;
+      });
+
+      return indices;
+
+    }
+
+    const cleanIndices = validateIndices(indices,playlist);
+
+    const indicesStr = cleanIndices.join(':');
+
+    setIndicesString(indicesStr);
+
+  },[indices])
+
   useEffect(() => {
-    if (!didFirstInit) return;
+    if (indicesString === undefined) return;
+
+    //reset
+    clearStartSourceTimeout();
+    setSkipping(true);
+    setStartLoading(false);
+    setPlayLoading(false);
+    setMediaLoaded(false);
+    setMediaStarted(false);
+
+  },[indicesString])
+
+  //update 'playable' properties
+  useEffect(() => {
+    if (!loadCount) return;
     setPlaylist(prevState => {
-      let playlist = prevState;
-      playlist = updatePlaylistPlayable(prevState,mediaErrors);
-      playlist = updatePlaylistCurrent(prevState,indices);
-      return playlist;
+      return updatePlaylistPlayable(prevState,mediaErrors);
     })
-  },[indices,mediaErrors])
+  },[loadCount,mediaErrors])
+
+  //update 'current' properties
+  useEffect(() => {
+    if (!loadCount) return;
+
+    const indices = indicesFromString(indicesString);
+    const trackIndex = indices[0];
+    if (trackIndex === undefined) return;
+
+    setPlaylist(prevState => {
+      return updatePlaylistCurrent(prevState,indices);
+    })
+  },[indicesString])
 
   //update tracks history
   //TOUFIX TOUCHECK
@@ -830,7 +936,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const trackIndex = track.index;
 
-    //append to history only if this differs from last item.
     const lastItem = trackHistory[trackHistory.length - 1];
     if (lastItem === trackIndex) return;
 
@@ -848,12 +953,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const track = getCurrentTrack(playlist);
     if (!track) return;
 
+
     if (playRequest){
       let doSkip = false;
+
+      const playableSources = track.sources.filter(track => {
+        return track.playable;
+      });
+
       if (!track.playable){
         DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" IS NOT PLAYABLE.");
         doSkip = true;
-      }else if (!track.sources.length){
+      }else if (!playableSources){
         //this track has probably been set to 'playable' using the filterPlayableTrack method.
         //Now, allow to filter the skip value. See Readme.
         DEBUG && console.log("REACTPLAYLISTER / TRACK #"+track.index+" IS SET AS PLAYABLE, BUT HAS NO SOURCES.",track.index);
@@ -874,18 +985,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     */
 
     const source = getCurrentSource(playlist);
-    if (source){
-      if (url !== source.url){
-          setUrl(source.url);
-      }else{
-        //if that source has already played, resets it.
-        const played = reactPlayerRef.current.getCurrentTime();
 
-        if (played){
-          DEBUG && console.log("REACTPLAYLISTER / RESET SOURCE",source);
-          reactPlayerRef.current.seekTo(0);
-        }
-      }
+    if (source && source.playable){
+      setUrl(source.url);
     }else{
       //we would like to use
       //setUrl();
@@ -937,10 +1039,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
 
-  }, [playlist,loop,autoskip]);
+  }, [playlist,loop,autoskip,shuffle]);
 
   //update 'loading' property of the controls
   useEffect(() => {
+
+    const indices = indicesFromString(indicesString);
 
     if (loading){
       DEBUG &&console.log("STARTED LOADING WITH INDICES",indices);

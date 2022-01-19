@@ -15,6 +15,11 @@ Prop | Description | Default
 `autoskip` | Ignore unplayable items when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it. | `true`
 `disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `undefined`
 `sortProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
+`ignoreUnsupportedUrls` | Remove URLs that are not supported by [React Player](https://github.com/cookpete/react-player) | `true`
+`ignoreDisabledUrls` | Remove URLs that matches a disabled provider | `true`
+`ignoreEmptyUrls` | Remove empty sets of URLs (some URLs be removed because `ignoreUnsupportedUrls` and/or `ignoreDisabledUrls` is set to `true`) | `true`
+
+
 
 You can also set [the props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#props).
 
