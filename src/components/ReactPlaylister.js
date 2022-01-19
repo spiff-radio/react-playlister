@@ -579,6 +579,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setPlayRequest(props.playing);
   },[props.playing])
 
+  useEffect(()=>{
+    if (playRequest){
+      setPlayLoading(true);
+    }
+  },[playRequest])
 
   //startLoading - if we're requesting play, should be set to TRUE until media starts.
   useEffect(()=>{
