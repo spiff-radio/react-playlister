@@ -58,7 +58,13 @@ The *filterPlayableTrack* and *filterSkipUnsourcedTrack* methods are useful in a
 
 Let's say you have a track without sources (URLs), and that you're able (eg. using an API call) to query its sources **when** that track is selected.
 
-1/ Consider that your track *is* playable even if it has no sources yet using the *filterPlayableTrack* method :
+1/ Enable tracks that have no sources
+
+```js
+ignoreEmptyUrls={false}
+```
+
+2/ Consider that your track *is* playable even if it has no sources yet using the *filterPlayableTrack* method :
 
 ```js
 const handleFilterPlayableTrack = (playable,track) => {
@@ -69,7 +75,7 @@ const handleFilterPlayableTrack = (playable,track) => {
 filterPlayableTrack={handleFilterPlayableTrack}
 ```
 
-2/ Block skipping using the *filterSkipUnsourcedTrack* method.  You'll then need your own mechanism to update the ReactPlaylister urls prop.
+3/ Block skipping using the *filterSkipUnsourcedTrack* method.  You'll then need your own mechanism to update the ReactPlaylister urls prop.
 
 ```js
 const handleFilterSkipUnsourcedTrack = (skip,track) => {
