@@ -39,7 +39,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
-  const autoskip = props.autoskip ?? true;
+  const autoskip = props.autoskip ?? true;//ignore unplayable or disabled track & sources when skipping
   const ignoreUnsupportedUrls = props.ignoreUnsupportedUrls ?? true;//remove sources that are not supported by React Player
   const ignoreDisabledUrls = props.ignoreDisabledUrls ?? true;//remove sources that have their providers disabled
   const ignoreEmptyUrls = props.ignoreEmptyUrls ?? true; //remove tracks that have no sources
@@ -47,7 +47,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const sourceNotStartingTimeOutMs = 7000;
 
   const getProvidersOrder = (keys) => {
-    keys = keys || ['file'];
+    if (!keys) return;
     const frontKeys = keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to put in front (remove the ones that does not exists in the original array)
     const backKeys = REACTPLAYER_PROVIDER_KEYS.filter(x => !frontKeys.includes(x));
     return frontKeys.concat(backKeys);
@@ -151,9 +151,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     return queue;
   }
 
-  const getTracksQueue = (playlist,track,loop,backwards) => {
+  const autoskipTrackFilter = track =>{
+    return track.playable;
+  }
+
+  const getTracksQueue = (playlist,track,autoskip,loop,backwards) => {
     let queue = getArrayQueue(playlist,track,loop,backwards);
 
+    if (autoskip){
+      queue = queue.filter(autoskipTrackFilter);
+    }
+
+    /*
     if (shuffle){
 
       //https://stackoverflow.com/a/2450976/782013
@@ -175,36 +184,30 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       }
       queue = shuffleArray(queue);
     }
+    */
 
     return queue;
   }
 
-  const getNextPlayableTrack = (playlist,track,loop,backwards) => {
-    const queue = getTracksQueue(playlist,track,loop,backwards).filter(track => {
-      return track.playable;
-    });
+  const getNextTrack = (playlist,track,autoskip,loop,backwards) => {
+    let queue = getTracksQueue(playlist,track,autoskip,loop,backwards);
     return queue[0];
   }
 
-  const getNextTrack = (playlist,track,loop,backwards) => {
-    const queue = getTracksQueue(playlist,track,loop,backwards);
-    return queue[0];
+  const autoskipSourceFilter = source =>{
+    return (source.playable && !source.disabled);
   }
 
-  const getSourcesQueue = (track,source,loop,backwards) => {
+  const getSourcesQueue = (track,source,autoskip,loop,backwards) => {
     let queue = getArrayQueue(track?.sources,source,loop,backwards);
-    return queue.filter(source=>{
-      if (autoskip){
-        if (!source.playable || source.disabled){
-          return false;
-        }
-        return true;
-      }
-    });
+    if (autoskip){
+      queue = queue.filter(autoskipSourceFilter);
+    }
+    return queue;
   }
 
-  const getNextSource = (track,source,loop,backwards) => {
-    const queue = getSourcesQueue(track,source,loop,backwards);
+  const getNextSource = (track,source,autoskip,loop,backwards) => {
+    const queue = getSourcesQueue(track,source,autoskip,loop,backwards);
     return queue[0];
   }
 
@@ -321,15 +324,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onSourceEnded(source);
     }
 
-    const queue = getTracksQueue(playlist,undefined,false,false).filter(track => {
-      return track.playable;
-    });
+    const queue = getTracksQueue(playlist,undefined,autoskip,false,false);
 
     const lastTrack = queue[queue.length - 1];
 
     if ( (track === lastTrack) ) { //tell parent the last played track has ended
       handlePlaylistEnded();
-    }else{//skip to next track
+    }else if (autoskip){//skip to next track
       nextTrack();
     }
 
@@ -438,7 +439,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const backwardsMsg = goBackwards ? 'TO PREVIOUS' : 'TO NEXT';
 
     const currentTrack = getCurrentTrack(playlist);
-    const newTrack = playRequest ? getNextPlayableTrack(playlist,currentTrack,loop,goBackwards) : getNextTrack(playlist,currentTrack,loop,goBackwards);
+    const newTrack = getNextTrack(playlist,currentTrack,autoskip,loop,goBackwards);
     const newTrackIndex = newTrack ? newTrack.index : undefined;
 
     if (newTrack){
@@ -466,7 +467,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const backwardsMsg = goBackwards ? ' TO PREVIOUS' : ' TO NEXT';
 
     //try to find another playable source for this track
-    const newSource = getNextSource(track,source,true,goBackwards);
+    const newSource = getNextSource(track,source,autoskip,true,goBackwards);
 
     //no source found, skip track
     if (newSource === undefined){
@@ -541,6 +542,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const updatePlaylistCurrent = (playlist,indices) => {
 
     if (!playlist.length) return playlist;
+    if (indices === undefined) throw new Error("updatePlaylistCurrent() requires indices to be defined.");
 
     const trackIndex = indices[0];
     const sourceIndex = indices[1];
@@ -694,6 +696,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       const sortProviders = getProvidersOrder(props.sortProviders);
       const disabledProviders = getDisabledProviders(props.disabledProviders);
 
+      console.log("SORT YEAH",sortProviders,props.sortProviders);
+
       const buildTrack = (urls,url_index) => {
 
         //defaults
@@ -768,7 +772,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
         track.sources = buildTrackSources(url_index,urls);
 
         //set default source
-        const currentSource = getNextSource(track);
+        const currentSource = getNextSource(track,undefined,autoskip);
         track.sources = track.sources.map(
           (item) => {
             return {
@@ -813,7 +817,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       return errors;
     }
 
-    const indices = !loadCount ? props.index : getCurrentIndices(playlist);
+    const indices = !loadCount ? (props.index || 0) : getCurrentIndices(playlist);
     let newPlaylist = buildPlaylist(props.urls,indices);
 
     const initialMediaErrors = getInitialPlaylistErrors(newPlaylist);
@@ -860,18 +864,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       });
 
       if (!track){
-        track = getNextTrack(playlist);//default track
+        track = getNextTrack(playlist,undefined,autoskip);//default track
       }
 
       if (!source && track){
 
         //last selected source
-        let currentSource = track.sources.find(function(source) {
-          return ( ( source.current === true ) && ( source.playable === true ) );
+        const currentSources = track.sources.filter(function(source) {
+          return source.current;
         });
+        if (autoskip){
+          currentSources.filter(autoskipSourceFilter);
+        }
+        let currentSource = currentSources[0];
 
         //first available source
-        const firstSource = getNextSource(track);
+        const firstSource = getNextSource(track,undefined,autoskip);
 
         if (currentSource || firstSource){
           source = currentSource ? currentSource : firstSource;
@@ -1017,30 +1025,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    let previousTracksQueue = getTracksQueue(playlist,track,loop,true);
-    let nextTracksQueue = getTracksQueue(playlist,track,loop,false);
-
-    if (autoskip){
-      previousTracksQueue = previousTracksQueue.filter(track => {
-        return track.playable;
-      });
-      nextTracksQueue = nextTracksQueue.filter(track => {
-        return track.playable;
-      });
-    }
+    const previousTracksQueue = getTracksQueue(playlist,track,autoskip,loop,true);
+    const nextTracksQueue = getTracksQueue(playlist,track,autoskip,loop,false);
+    //SOURCE
+    const previousSourcesQueue = getSourcesQueue(track,source,autoskip,false,true);
+    const nextSourcesQueue = getSourcesQueue(track,source,autoskip,false,false);
 
     appendControls = {
       ...appendControls,
       has_previous_track:  (previousTracksQueue?.length !== 0),
-      has_next_track:      (nextTracksQueue?.length !== 0)
-    }
-
-    //SOURCE
-    const previousSourcesQueue = getSourcesQueue(track,source,false,true);
-    const nextSourcesQueue = getSourcesQueue(track,source,false,false);
-
-    appendControls = {
-      ...appendControls,
+      has_next_track:      (nextTracksQueue?.length !== 0),
       has_previous_source: (previousSourcesQueue?.length !== 0),
       has_next_source:      (nextSourcesQueue?.length !== 0)
     }

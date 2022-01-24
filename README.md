@@ -12,7 +12,7 @@ Prop | Description | Default
 `index` | Load a specific item when component is initialized.<br/>&nbsp; ◦ &nbsp;Track: index of the selected track (starting at 0), eg. `1` (or `[1]`)<br/>&nbsp; ◦ &nbsp;Source: array of track index + source index (starting at 0) eg. `[0,2]` | `undefined`
 `loop` | Set to `true` or `false` to loop the playlist. | `false`
 `shuffle` | Set to `true` or `false` to enable shuffle mode. **(not yet implemented)** | `false`
-`autoskip` | Ignore unplayable items when traversing the playlist; and automatically skip to the next item if it fires an error while trying to play it. | `true`
+`autoskip` | Ignore unplayable/disabled items when traversing the playlist and skip to the next track when media ends.  | `true`
 `disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `undefined`
 `sortProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
 `ignoreUnsupportedUrls` | Remove URLs that are not supported by [React Player](https://github.com/cookpete/react-player) | `true`

@@ -23,9 +23,9 @@ function App() {
     [
       'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
+      'https://www.youtube.com/watch?v=fire-an-error-when-loaded',
       'https://www.notplayable.com',
-      'https://www.youtube.com/watch?v=v3RTs0LCc-8',
-      'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
+      'https://www.youtube.com/watch?v=v3RTs0LCc-8'
     ],
     'https://www.notplayable.com',
     'https://www.notplayable.com',
@@ -142,7 +142,12 @@ function App() {
       loop={loop}
       shuffle={shuffle}
       autoskip={autoskip}
-      //disabledProviders={['soundcloud']}
+      disabledProviders={['soundcloud']}
+      //sortProviders={['file']}
+      ignoreUnsupportedUrls={false}
+      ignoreDisabledUrls={false}
+      ignoreEmptyUrls={false}
+
 
       /*
       ReactPlayer props
