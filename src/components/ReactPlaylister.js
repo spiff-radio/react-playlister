@@ -84,7 +84,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //this way, even if an URL is used multiple times, those properties will be shared.
   const [mediaErrors,setMediaErrors] = useState([]);
 
-  const [trackHistory,setTrackHistory] = useState([]);
+  const trackHistory = useRef([]);
 
   const [controls,setControls] = useState({
     has_previous_track:false,
@@ -950,14 +950,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const trackIndex = track.index;
 
-    const lastItem = trackHistory[trackHistory.length - 1];
+    const history = trackHistory.current;
+    const lastHistoryIndex = history.length - 1;
+
+    const lastItem = history[lastHistoryIndex];
     if (lastItem === trackIndex) return;
 
-    const newHistory = [...trackHistory, trackIndex];
+    trackHistory.current = [...history, trackIndex];
 
-    console.log("REACTPLAYLISTER / UPDATE TRACKS HISTORY",newHistory);
-
-    setTrackHistory(newHistory)
+    console.log("REACTPLAYLISTER / UPDATE TRACKS HISTORY",trackHistory.current);
 
   }, [playlist]);
 
