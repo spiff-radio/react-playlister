@@ -82,7 +82,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //object containing each playlist URL (as properties);
   //with its playable / error status
   //this way, even if an URL is used multiple times, those properties will be shared.
-  const [mediaErrors,setMediaErrors] = useState([]);
+  const [mediaErrors,setMediaErrors] = useState(undefined);
 
   const trackHistory = useRef([]);
 
@@ -500,7 +500,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const updatePlaylistPlayable = (playlist,mediaErrors) => {
 
     if (!playlist.length) return playlist;
-    mediaErrors = mediaErrors || [];
+    if (mediaErrors === undefined) throw new Error("updatePlaylistPlayable() requires mediaErrors to be defined.");
 
     playlist = [...playlist].map((trackItem) => {
 
@@ -677,7 +677,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //build our playlist based on the prop URLs
   useEffect(() => {
 
-    if (!props.urls) return;
+    if (props.urls === undefined) return;
 
     //reset
     setSkipping(false);
@@ -689,14 +689,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     Build Playlist
     */
     //build a clean playlist based on an array of URLs
-    const buildPlaylist = (trackUrls,indices) => {
+    const buildPlaylist = (trackUrls) => {
 
       trackUrls = [].concat(trackUrls || []);//force array
 
       const sortProviders = getProvidersOrder(props.sortProviders);
       const disabledProviders = getDisabledProviders(props.disabledProviders);
-
-      console.log("SORT YEAH",sortProviders,props.sortProviders);
 
       const buildTrack = (urls,url_index) => {
 
