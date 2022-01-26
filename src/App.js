@@ -44,13 +44,6 @@ function App() {
   const [playRequest, setPlayRequest] = useState(false);
   const [autoskip, setAutoskip] = useState(true);
 
-  //sync the playRequest state with the media playing state:
-  //(eg. because we've used the Youtube controls to play the media instead of our play button)
-  useEffect(() => {
-    if (!playlisterControls) return;
-    setPlayRequest(playlisterControls.playing);
-  }, [playlisterControls]);
-
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
     setPlaylisterPlaylist(playlist);

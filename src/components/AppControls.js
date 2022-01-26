@@ -87,7 +87,7 @@ export const AppControls = props => {
           <p>
             <strong>playing</strong>
             {
-              (controls.playLoading || controls.mediaLoading) ?
+              controls.loading ?
               <span>...</span>
               :
               <span>{controls.playing ? 'true' : 'false'}</span>
