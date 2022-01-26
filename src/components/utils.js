@@ -217,15 +217,13 @@ const getArrayQueue = (array,needle,loop,backwards) => {
   return queue;
 }
 
-const autoskipTrackFilter = track =>{
-  return track.playable;
-}
-
-export const getTracksQueue = (playlist,track,autoskip,loop,backwards) => {
+export const getTracksQueue = (playlist,track,skipping,loop,backwards) => {
   let queue = getArrayQueue(playlist,track,loop,backwards);
 
-  if (autoskip){
-    queue = queue.filter(autoskipTrackFilter);
+  if (skipping){
+    queue = queue.filter(track => {
+      return track.autoplayable;
+    });
   }
 
   /*
@@ -255,25 +253,23 @@ export const getTracksQueue = (playlist,track,autoskip,loop,backwards) => {
   return queue;
 }
 
-export const getNextTrack = (playlist,track,autoskip,loop,backwards) => {
-  let queue = getTracksQueue(playlist,track,autoskip,loop,backwards);
+export const getNextTrack = (playlist,track,skipping,loop,backwards) => {
+  let queue = getTracksQueue(playlist,track,skipping,loop,backwards);
   return queue[0];
 }
 
-const autoskipSourceFilter = source =>{
-  return (source.playable && !source.disabled);
-}
-
-export const getSourcesQueue = (track,source,autoskip,loop,backwards) => {
+export const getSourcesQueue = (track,source,skipping,loop,backwards) => {
   let queue = getArrayQueue(track?.sources,source,loop,backwards);
-  if (autoskip){
-    queue = queue.filter(autoskipSourceFilter);
+  if (skipping){
+    queue = queue.filter(source => {
+      return source.autoplayable;
+    });
   }
   return queue;
 }
 
-export const getNextSource = (track,source,autoskip,loop,backwards) => {
-  const queue = getSourcesQueue(track,source,autoskip,loop,backwards);
+export const getNextSource = (track,source,skipping,loop,backwards) => {
+  const queue = getSourcesQueue(track,source,skipping,loop,backwards);
   return queue[0];
 }
 
@@ -385,8 +381,8 @@ export const setCurrentItems = (playlist,indices) => {
 
 }
 
-
-export const validateIndices = (input,playlist,filterPlayable)=>{
+//santize indices; and select a default source if it is not set.
+export const validateIndices = (input,playlist)=>{
 
   if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
 
@@ -399,51 +395,42 @@ export const validateIndices = (input,playlist,filterPlayable)=>{
   let track = undefined;
   let source = undefined;
 
-  //get track
-  track = playlist.find(function(track) {
-    return ( track.index === trackIndex );
-  });
-
-  //make sure track can play
-  if (track){
-    track = [track].find(autoskipTrackFilter);
+  //get index track
+  if (trackIndex !== undefined){
+    track = playlist.find(function(track) {
+      return ( track.index === trackIndex );
+    });
   }
 
-  //track has not been found. Get default.
+  //reset source index
   if (!track){
-    sourceIndex = undefined;//reset source index
-    track = getNextTrack(playlist,undefined,filterPlayable);//default track
-  }else{
-    source = track.sources.find(function(source) {
-      return ( source.index === sourceIndex );
-    });
+    sourceIndex = undefined;
   }
 
-  //check for the last selected source if any
-  if (!source){
-    source = track?.sources.find(function(source) {
-      return source.current;
-    });
-  }
+  if (track){
+    //get index source
+      if (trackIndex !== undefined){
+      source = track.sources.find(function(source) {
+        return ( source.index === sourceIndex );
+      });
+    }
 
-  if (source && filterPlayable){ //make sure the current source can play
-    source = [source].find(autoskipSourceFilter);
-  }
-
-  //use default source
-  if (!source){
-    source = getNextSource(track,undefined,filterPlayable);
+    //get current source
+    if (!source){
+      source = track?.sources.find(function(source) {
+        return source.current;
+      });
+    }
+    //get default source
+    if (!source){
+      source = getNextSource(track);
+    }
   }
 
   trackIndex = track ? track.index : undefined;
   sourceIndex = source ? source.index : undefined;
 
   newIndices = [trackIndex,sourceIndex];
-
-  if ( (newIndices[0]===indices[0]) && (newIndices[1]===indices[1]) ) {
-    //no changes.  Return input data so reference is kept.
-    return input;
-  }
 
   return newIndices.filter(function(x) {
     return x !== undefined;

@@ -182,7 +182,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onSourceEnded(source);
     }
 
-    const queue = getTracksQueue(playlist,undefined,autoskip,false,false);
+    const queue = getTracksQueue(playlist,undefined,true,false,false);
 
     const lastTrack = queue[queue.length - 1];
 
@@ -411,9 +411,15 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     //set 'current' items in playlist when indices are updated
     useEffect(()=>{
+
       if (!playlistHasInit) return;
 
-      let newIndices = validateIndices(indices,playlist,true);
+      let newIndices = validateIndices(indices,playlist);
+
+      if (!newIndices.length){
+        DEBUG && console.log("REACTPLAYLISTER / INVALID INDICES, ABORD");
+        return;
+      }
 
       if (indices !== newIndices){
         DEBUG && console.log("REACTPLAYLISTER / INDICES FROM > TO",indices,newIndices);
@@ -518,11 +524,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //TOUFIX TOUCHECK
   useEffect(() => {
 
-    const track = getCurrentTrack(playlist);
     const source = getCurrentSource(playlist);
-    if (!track || !source) return;
+    if (!source) return;
 
-    const trackIndex = track.index;
+    const trackIndex = source.trackIndex;
 
     const history = trackHistory.current;
     const lastHistoryIndex = history.length - 1;
@@ -598,11 +603,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    const previousTracksQueue = getTracksQueue(playlist,track,autoskip,loop,true);
-    const nextTracksQueue = getTracksQueue(playlist,track,autoskip,loop,false);
+    const previousTracksQueue = getTracksQueue(playlist,track,true,loop,true);
+    const nextTracksQueue = getTracksQueue(playlist,track,true,loop,false);
     //SOURCE
-    const previousSourcesQueue = getSourcesQueue(track,source,autoskip,false,true);
-    const nextSourcesQueue = getSourcesQueue(track,source,autoskip,false,false);
+    const previousSourcesQueue = getSourcesQueue(track,source,true,false,true);
+    const nextSourcesQueue = getSourcesQueue(track,source,true,false,false);
 
     appendControls = {
       ...appendControls,
@@ -625,10 +630,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //update 'loading' property of the controls
   useEffect(() => {
     if (!playlistHasInit) return;
+
+    const source = getCurrentSource(playlist);
+
     if (loading){
-      DEBUG &&console.log("STARTED LOADING WITH INDICES",indices);
+      DEBUG &&console.log("STARTED LOADING TRACK#"+source.trackIndex+" SOURCE#"+source.index);
     }else{
-      DEBUG &&console.log("FINISHED LOADING WITH INDICES",indices);
+      DEBUG &&console.log("FINISHED LOADING TRACK#"+source.trackIndex+" SOURCE#"+source.index);
     }
 
     setControls(prevState => {
