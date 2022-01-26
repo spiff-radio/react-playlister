@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, forwardRef, useImperativeHandle  } from "react";
+import React, { useState, useCallback,useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
 import './ReactPlaylister.scss';
 import {
   buildPlaylist,
   getCurrentTrack,
   getCurrentSource,
-  getCurrentIndices,
   getTracksQueue,
   getNextTrack,
   getSourcesQueue,
@@ -13,8 +12,8 @@ import {
   setPlayableItems,
   setCurrentItems,
   getUnsupportedUrls,
-  filterSupportedUrls,
-  validateIndices
+  validateIndices,
+  useSanitizedIndices
 } from './utils.js';
 
 
@@ -56,8 +55,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //this way, even if an URL is used multiple times, those properties will be shared.
   const [mediaErrors, setMediaErrors] = useState(undefined);
 
-  const [indices, setIndices] = useState(undefined);
-
   const [url, setUrl] = useState();//url for ReactPlayer
 
   const [controls,setControls] = useState({
@@ -68,6 +65,26 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     playing:false,
     loading:false,
   });
+
+  // https://stackoverflow.com/a/70862465/782013
+  // useCallback memoizes the function so that it's not recreated on every
+  // render. This also prevents the custom hook from looping infinintely
+  const sanitizeIndicesFn = useCallback((rawIndices) => {
+    if (!playlist) return;
+    // Whatever you actually do to sanitize the index goes in here,
+    // but I'll just use the makeEven function for this example
+    return validateIndices(rawIndices,playlist);
+    // If you use other variables in this function which are defined in this
+    // component (e.g. you mentioned an array state of some kind), you'll need
+    // to include them in the dependency array below:
+  }, [playlist]);
+
+  // Now simply use the sanitized index where you need it,
+  // and the setter will sanitize for you when setting it (like in the
+  // click handler in the button below)
+  const [indices, setSanitizedIndices] = useSanitizedIndices(sanitizeIndicesFn,undefined);
+
+
 
   const clearStartSourceTimeout = () => {
     if (!sourceStartTimeout.current) return;
@@ -294,7 +311,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
       DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+backwardsMsg+" TRACK #"+newTrackIndex);
 
-      setIndices(newTrackIndex);
+      setSanitizedIndices(newTrackIndex);
 
     }else{ //no more playable tracks
       handlePlaylistEnded();
@@ -325,7 +342,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+backwardsMsg+" FROM TRACK #"+source.trackIndex+" SOURCE #"+source.index+" TO TRACK #"+newSource.trackIndex+" SOURCE #"+newSource.index);
 
-    setIndices([track.index,newSource.index]);
+    setSanitizedIndices([track.index,newSource.index]);
 
   }
 
@@ -376,7 +393,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       //reset indices if they were defined
 
       if (indices !== undefined){
-        setIndices([...indices]);//use spread operator to force state update
+        console.log("INDICES YO",indices);
+        setSanitizedIndices([...indices]);//use spread operator to force state update
       }
 
       setPlaylist(updatedPlaylist);
@@ -396,7 +414,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //set indices playlist at init & when prop changes
     useEffect(()=>{
       if (!playlistHasInit) return;
-      setIndices(props.index || 0);
+      setSanitizedIndices(props.index || 0);
     },[playlistHasInit,props.index])
 
     //reset
@@ -413,21 +431,11 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     useEffect(()=>{
 
       if (!playlistHasInit) return;
-
-      let newIndices = validateIndices(indices,playlist);
-
-      if (!newIndices.length){
-        DEBUG && console.log("REACTPLAYLISTER / INVALID INDICES, ABORD");
-        return;
-      }
-
-      if (indices !== newIndices){
-        DEBUG && console.log("REACTPLAYLISTER / INDICES FROM > TO",indices,newIndices);
-      }
+      if (!indices) return;
 
       setPlaylist(prevState => {
         let newPlaylist = prevState.map(a => {return {...a}});//deep clone data; we can't mutate the state
-        return setCurrentItems(newPlaylist,newIndices);//set 'current'
+        return setCurrentItems(newPlaylist,indices);//set 'current'
       })
 
     },[indices])

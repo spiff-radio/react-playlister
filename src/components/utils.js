@@ -1,3 +1,4 @@
+import React, { useState, useCallback,useEffect  } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
@@ -430,10 +431,37 @@ export const validateIndices = (input,playlist)=>{
   trackIndex = track ? track.index : undefined;
   sourceIndex = source ? source.index : undefined;
 
-  newIndices = [trackIndex,sourceIndex];
-
-  return newIndices.filter(function(x) {
+  newIndices = [trackIndex,sourceIndex].filter(function(x) {
     return x !== undefined;
   });
 
+  if (!newIndices.length){
+    //DEBUG && console.log("REACTPLAYLISTER / INVALID INDICES, ABORD");
+    return;
+  }
+
+  if (indices !== newIndices){
+    DEBUG && console.log("REACTPLAYLISTER / INDICES FROM > TO",indices,newIndices);
+  }
+
+  return newIndices;
+
+}
+
+export function useSanitizedIndices (sanitizeIndicesFn, unsanitizedIndex) {
+  const [index, setIndex] = useState(sanitizeIndicesFn(unsanitizedIndex));
+
+  // Like setIndex, but also sanitizes
+  const setSanitizedIndices = useCallback(
+    (unsanitizedIndex) => setIndex(sanitizeIndicesFn(unsanitizedIndex)),
+    [sanitizeIndicesFn, setIndex],
+  );
+
+  // Update state if arguments change
+  useEffect(
+    () => setSanitizedIndices(unsanitizedIndex),
+    [setSanitizedIndices, unsanitizedIndex],
+  );
+
+  return [index, setSanitizedIndices];
 }
