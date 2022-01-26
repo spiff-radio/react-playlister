@@ -12,6 +12,9 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
 
   sortedProviders = getProvidersOrder(sortedProviders);
   disabledProviders = getDisabledProviders(disabledProviders);
+  ignoreUnsupportedUrls = ignoreUnsupportedUrls ?? true;//remove sources that are not supported by React Player
+  ignoreDisabledUrls = ignoreDisabledUrls ?? true;//remove sources that have their providers disabled
+  ignoreEmptyUrls = ignoreEmptyUrls ?? true; //remove tracks that have no sources
 
   const buildTrack = (urls,url_index) => {
 
@@ -56,7 +59,7 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
           playable:undefined,
           url:url,
           error:undefined,
-          disabled:provider ? disabledProviders.includes(provider.key) : undefined,
+          disabled:provider ? disabledProviders.includes(provider.key) : false,
           provider:provider ? {name:provider.name,key:provider.key} : undefined,
           duration:undefined
         }
@@ -118,6 +121,21 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
 
 }
 
+export const filterSupportedUrls = urls => {
+  return urls.filter(url=>ReactPlayer.canPlay(url))
+}
+
+export const getUnsupportedUrls = playlist => {
+
+  const getUnsupportedSources = playlist => {
+    const allSources = playlist.map(track => track.sources).flat(Infinity);
+    return allSources.filter(source => !source.supported);
+  }
+
+  const sources = getUnsupportedSources(playlist);
+  return sources.map(source=>source.url)
+}
+
 export const getCurrentTrack = (playlist) => {
   return playlist?.find(function(track) {
     return track.current;
@@ -135,14 +153,6 @@ export const getCurrentIndices = (playlist) => {
   const track = getCurrentTrack(playlist);
   const source = getCurrentSource(playlist);
   return [track?.index,source?.index];
-}
-
-//converts an indices string into an array
-export const indicesFromString = (indicesString) => {
-  let arr =  (indicesString !== undefined) ? indicesString.split(":") : [];
-  arr = arr.filter(e =>  e); //remove empty values
-  arr = arr.map(e =>  parseInt(e)); //convert to integers
-  return arr;
 }
 
 const getProvidersOrder = (keys) => {
@@ -265,12 +275,17 @@ export const getNextSource = (track,source,autoskip,loop,backwards) => {
   return queue[0];
 }
 
-export const updatePlaylistPlayable = (playlist,mediaErrors,filterPlayableFn) => {
+export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn) => {
 
   if (!playlist.length) return playlist;
-  if (mediaErrors === undefined) throw new Error("updatePlaylistPlayable() requires mediaErrors to be defined.");
+  if (mediaErrors === undefined) throw new Error("setPlayableItems() requires mediaErrors to be defined.");
 
-  playlist = [...playlist].map((trackItem) => {
+  let sourceCount = 0;
+  let playableSourceCount = 0;
+  let trackCount = 0;
+  let playableTrackCount = 0;
+
+  playlist = playlist.map((trackItem) => {
 
     const getUpdatedSources = (track) => {
       return track.sources.map(
@@ -301,16 +316,22 @@ export const updatePlaylistPlayable = (playlist,mediaErrors,filterPlayableFn) =>
       trackItem.playable = filterPlayableFn(trackItem.playable,trackItem);
     }
 
+    //for debug
+    sourceCount = sourceCount + trackItem.sources.length;
+    playableSourceCount = playableSourceCount + playableSources.length;
+    trackCount = trackCount + 1;
+    playableTrackCount = trackItem.playable ? playableTrackCount + 1 : playableTrackCount;
+
     return trackItem;
   });
-  DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES",playlist);
+  DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE': "+playableSourceCount+"/"+sourceCount+" SOURCES, "+playableTrackCount+"/"+trackCount+" TRACKS");
   return playlist;
 }
 
-export const updatePlaylistCurrent = (playlist,indices) => {
+export const setCurrentItems = (playlist,indices) => {
 
   if (!playlist.length) return playlist;
-  if (indices === undefined) throw new Error("updatePlaylistCurrent() requires indices to be defined.");
+  if (indices === undefined) throw new Error("setCurrentItems() requires indices to be defined.");
 
   const trackIndex = indices[0];
   const sourceIndex = indices[1];
@@ -342,8 +363,74 @@ export const updatePlaylistCurrent = (playlist,indices) => {
     });
   }
 
-  DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY FOR TRACK#"+indices[0]+" SOURCE#"+indices[1],playlist);
+  DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
 
   return playlist;
+
+}
+
+
+export const validateIndices = (input,playlist,filterPlayable)=>{
+
+  if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
+
+  const indices = Array.isArray(input) ? input : [input];//force array
+  let newIndices = [...indices];
+
+  let trackIndex = newIndices[0];
+  let sourceIndex = newIndices[1];
+
+  let track = undefined;
+  let source = undefined;
+
+  //get track
+  track = playlist.find(function(track) {
+    return ( track.index === trackIndex );
+  });
+
+  //make sure track can play
+  if (track){
+    track = [track].find(autoskipTrackFilter);
+  }
+
+  //track has not been found. Get default.
+  if (!track){
+    sourceIndex = undefined;//reset source index
+    track = getNextTrack(playlist,undefined,filterPlayable);//default track
+  }else{
+    source = track.sources.find(function(source) {
+      return ( source.index === sourceIndex );
+    });
+  }
+
+  //check for the last selected source if any
+  if (!source){
+    source = track?.sources.find(function(source) {
+      return source.current;
+    });
+  }
+
+  if (source && filterPlayable){ //make sure the current source can play
+    source = [source].find(autoskipSourceFilter);
+  }
+
+  //use default source
+  if (!source){
+    source = getNextSource(track,undefined,filterPlayable);
+  }
+
+  trackIndex = track ? track.index : undefined;
+  sourceIndex = source ? source.index : undefined;
+
+  newIndices = [trackIndex,sourceIndex];
+
+  if ( (newIndices[0]===indices[0]) && (newIndices[1]===indices[1]) ) {
+    //no changes.  Return input data so reference is kept.
+    return input;
+  }
+
+  return newIndices.filter(function(x) {
+    return x !== undefined;
+  });
 
 }

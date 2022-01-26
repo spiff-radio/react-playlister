@@ -20,6 +20,7 @@ function App() {
       'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     [],
+    ['https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen'],
     [
       'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
@@ -75,9 +76,6 @@ function App() {
     arr = arr.filter(item => item);//remove empty values
     setUrls(arr);
   }
-
-
-  console.log("APP RELOAD");
 
   return (
     <div className="App">
@@ -143,7 +141,7 @@ function App() {
       shuffle={shuffle}
       autoskip={autoskip}
       disabledProviders={['soundcloud']}
-      //sortProviders={['file']}
+      //sortedProviders={['file']}
       ignoreUnsupportedUrls={false}
       ignoreDisabledUrls={false}
       ignoreEmptyUrls={false}
