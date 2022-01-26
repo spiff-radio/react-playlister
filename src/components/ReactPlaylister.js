@@ -1,37 +1,24 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
-import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 import './ReactPlaylister.scss';
+import {
+  buildPlaylist,
+  getCurrentTrack,
+  getCurrentSource,
+  getCurrentIndices,
+  indicesFromString,
+  getTracksQueue,
+  getNextTrack,
+  autoskipSourceFilter,
+  getSourcesQueue,
+  getNextSource,
+  updatePlaylistPlayable,
+  updatePlaylistCurrent
+} from './utils.js';
 
-export const getCurrentTrack = (playlist) => {
-  return playlist?.find(function(track) {
-    return track.current;
-  });
-}
 
-export const getCurrentSource = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  return track?.sources.find(function(source) {
-    return source.current;
-  });
-}
-
-export const getCurrentIndices = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  const source = getCurrentSource(playlist);
-  return [track?.index,source?.index];
-}
-
-//converts an indices string into an array
-const indicesFromString = (indicesString) => {
-  let arr =  (indicesString !== undefined) ? indicesString.split(":") : [];
-  arr = arr.filter(e =>  e); //remove empty values
-  arr = arr.map(e =>  parseInt(e)); //convert to integers
-  return arr;
-}
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
-const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 
 export const ReactPlaylister = forwardRef((props, ref) => {
 
@@ -46,17 +33,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const sourceNotStartingTimeOutMs = 7000;
 
-  const getProvidersOrder = (keys) => {
-    if (!keys) return;
-    const frontKeys = keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to put in front (remove the ones that does not exists in the original array)
-    const backKeys = REACTPLAYER_PROVIDER_KEYS.filter(x => !frontKeys.includes(x));
-    return frontKeys.concat(backKeys);
-  }
 
-  const getDisabledProviders = (keys) => {
-    keys = keys || [];
-    return keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to disable (remove the ones that does not exists in the original array)
-  }
 
   //do we iterate URLs backwards ?
   //when a source fails, we need to know if we have to go backwards or not.
@@ -102,114 +79,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [url, setUrl] = useState();//url for ReactPlayer
 
   const sourceStartTimeout = useRef(undefined);
-
-  //build a queue of keys based on an array
-  //If needle is NOT defined, it will return the full array.
-  //If needle IS defined (and exists); it will return the items following the needle.
-  const getArrayQueue = (array,needle,loop,backwards) => {
-
-    let needleIndex = undefined;
-    let previousQueue = [];
-    let nextQueue = [];
-    let queue = [];
-
-    const isStartItem = (item,index,array) => {
-      return ( item.index === needle.index );
-    }
-
-    //find the array index of the needle
-    if (needle){
-      needleIndex = array.findIndex(isStartItem);
-      needleIndex = (needleIndex === -1) ? undefined : needleIndex;
-    }
-
-    if (needleIndex !== undefined){
-      var nextIndex = needleIndex+1;
-
-      if (nextIndex < array.length){
-        nextQueue = array.slice(nextIndex);
-      }
-
-      if (needleIndex > 0){
-        previousQueue = array.slice(0,needleIndex);
-      }
-
-    }else{
-      nextQueue = array;
-    }
-
-    if (loop){
-      nextQueue = previousQueue = nextQueue.concat(previousQueue);
-    }
-
-    if (backwards === true){
-      queue = previousQueue.reverse();
-    }else{
-      queue = nextQueue;
-    }
-
-    return queue;
-  }
-
-  const autoskipTrackFilter = track =>{
-    return track.playable;
-  }
-
-  const getTracksQueue = (playlist,track,autoskip,loop,backwards) => {
-    let queue = getArrayQueue(playlist,track,loop,backwards);
-
-    if (autoskip){
-      queue = queue.filter(autoskipTrackFilter);
-    }
-
-    /*
-    if (shuffle){
-
-      //https://stackoverflow.com/a/2450976/782013
-      const shuffleArray = (array) => {
-        let currentIndex = array.length,  randomIndex;
-
-        // While there remain elements to shuffle...
-        while (currentIndex !== 0) {
-
-          // Pick a remaining element...
-          randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-
-          // And swap it with the current element.
-          [array[currentIndex], array[randomIndex]] = [
-            array[randomIndex], array[currentIndex]];
-        }
-        return array;
-      }
-      queue = shuffleArray(queue);
-    }
-    */
-
-    return queue;
-  }
-
-  const getNextTrack = (playlist,track,autoskip,loop,backwards) => {
-    let queue = getTracksQueue(playlist,track,autoskip,loop,backwards);
-    return queue[0];
-  }
-
-  const autoskipSourceFilter = source =>{
-    return (source.playable && !source.disabled);
-  }
-
-  const getSourcesQueue = (track,source,autoskip,loop,backwards) => {
-    let queue = getArrayQueue(track?.sources,source,loop,backwards);
-    if (autoskip){
-      queue = queue.filter(autoskipSourceFilter);
-    }
-    return queue;
-  }
-
-  const getNextSource = (track,source,autoskip,loop,backwards) => {
-    const queue = getSourcesQueue(track,source,autoskip,loop,backwards);
-    return queue[0];
-  }
 
   //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
   //without having an error fired.
@@ -410,6 +279,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   }
 
+  /*
+  //TOUFIX TOUCHECK USEFUL ? KEEP IT HERE FOR NOW.
   const rewindMedia = () => {
     //if that source has already played, resets it.
     const played = reactPlayerRef.current.getCurrentTime();
@@ -419,6 +290,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       reactPlayerRef.current.seekTo(0);
     }
   }
+  */
 
   const handlePlaylistEnded = () => {
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST ENDED");
@@ -495,89 +367,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const nextSource = () => {
     skipSource(false);
-  }
-
-  const updatePlaylistPlayable = (playlist,mediaErrors) => {
-
-    if (!playlist.length) return playlist;
-    if (mediaErrors === undefined) throw new Error("updatePlaylistPlayable() requires mediaErrors to be defined.");
-
-    playlist = [...playlist].map((trackItem) => {
-
-      const getUpdatedSources = (track) => {
-        return track.sources.map(
-          (sourceItem) => {
-
-            const url = sourceItem.url;
-            const mediaError = mediaErrors[url];
-
-            return {
-              ...sourceItem,
-              playable:(sourceItem.supported && !mediaError),
-              error:mediaError
-            }
-          }
-        )
-      }
-
-      trackItem.sources = getUpdatedSources(trackItem);
-
-      const playableSources = trackItem.sources.filter(function(source) {
-        return source.playable;
-      });
-
-      //is the track playable ?
-      trackItem.playable = (playableSources.length > 0);
-      //allow to filter the playable value (only if it has been already set; so it does not run on first init).
-      if ( typeof props.filterPlayableTrack === 'function' ) {
-        trackItem.playable = props.filterPlayableTrack(trackItem.playable,trackItem);
-      }
-
-      return trackItem;
-    });
-    DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE' PROPERTIES",playlist);
-    return playlist;
-  }
-
-  const updatePlaylistCurrent = (playlist,indices) => {
-
-    if (!playlist.length) return playlist;
-    if (indices === undefined) throw new Error("updatePlaylistCurrent() requires indices to be defined.");
-
-    const trackIndex = indices[0];
-    const sourceIndex = indices[1];
-
-    if (trackIndex !== undefined){
-      playlist = playlist.map((trackItem) => {
-
-        const isCurrentTrack = (trackItem.index === trackIndex);
-
-        //for the selected track only
-        //update the 'current' property of its sources
-
-        const getUpdatedSources = (track) => {
-          return track.sources.map(
-            (sourceItem) => {
-              return {
-                ...sourceItem,
-                current:(sourceItem.index === sourceIndex)
-              }
-            }
-          )
-        }
-
-        return {
-          ...trackItem,
-          current:isCurrentTrack,
-          sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
-        }
-      });
-    }
-
-    DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY FOR TRACK#"+indices[0]+" SOURCE#"+indices[1],playlist);
-
-    return playlist;
-
   }
 
   /*
@@ -685,122 +474,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setPlayLoading(false);
     setSourceLoading(false);
 
-    /*
-    Build Playlist
-    */
-    //build a clean playlist based on an array of URLs
-    const buildPlaylist = (trackUrls) => {
-
-      trackUrls = [].concat(trackUrls || []);//force array
-
-      const sortProviders = getProvidersOrder(props.sortProviders);
-      const disabledProviders = getDisabledProviders(props.disabledProviders);
-
-      const buildTrack = (urls,url_index) => {
-
-        //defaults
-        let track = {
-          index:url_index,
-          current:undefined,
-          playable:undefined,
-          sources:[]
-        }
-
-        const buildTrackSources = (index,urls) => {
-
-          const sortSourcesByProvider = (a,b) => {
-
-            if (!sortProviders.length) return 0;
-
-            let aProviderKey = sortProviders.indexOf(a.provider?.key);
-            aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortProviders.length; //if key not found, consider at the end
-
-            let bProviderKey = sortProviders.indexOf(b.provider?.key);
-            bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortProviders.length; //if key not found, consider at the end
-
-            return aProviderKey - bProviderKey;
-
-          }
-
-          urls = [].concat(urls || []);//force array (it might be a single URL string)
-          urls = urls.flat(Infinity);//flatten
-
-          let sources = urls.map(function(url,i) {
-
-            const provider = reactplayerProviders.find(provider => {
-              return provider.canPlay(url);
-            });
-
-            return {
-              index:i,
-              trackIndex:index,
-              current:false,
-              supported:ReactPlayer.canPlay(url),
-              playable:undefined,
-              url:url,
-              error:undefined,
-              disabled:provider ? disabledProviders.includes(provider.key) : undefined,
-              provider:provider ? {name:provider.name,key:provider.key} : undefined,
-              duration:undefined
-            }
-          });
-
-          //remove unsupported sources
-          if (ignoreUnsupportedUrls){
-            sources = sources.filter(source => {
-              return source.supported;
-            });
-          }
-
-          //remove disabled providers sources
-          if (ignoreDisabledUrls){
-            sources = sources.filter(source => {
-              return !source.disabled;
-            });
-          }
-
-          //sort sources
-          if (sortProviders){
-            sources = sources.sort(sortSourcesByProvider);
-          }
-
-          return sources
-        }
-
-        track.sources = buildTrackSources(url_index,urls);
-
-        //set default source
-        const currentSource = getNextSource(track,undefined,autoskip);
-        track.sources = track.sources.map(
-          (item) => {
-            return {
-              ...item,
-              current:(item === currentSource)
-            }
-          }
-        )
-
-        return track;
-
-      }
-
-      let playlist = trackUrls.map(
-        (v, i) => {
-          return buildTrack(v,i)
-        }
-      );
-
-      if (ignoreEmptyUrls){
-        playlist = playlist.filter(track => {
-          return (track.sources.length > 0);
-        });
-      }
-
-      return playlist;
-
-
-    }
-
     //get initial source errors (unsupported or disabled sources)
     const getInitialPlaylistErrors = playlist => {
       let errors = {};
@@ -816,12 +489,19 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     const indices = !loadCount ? (props.index || 0) : getCurrentIndices(playlist);
-    let newPlaylist = buildPlaylist(props.urls,indices);
+    let newPlaylist = buildPlaylist(
+      props.urls,
+      props.sortProviders,
+      props.disabledProviders,
+      ignoreUnsupportedUrls,
+      ignoreDisabledUrls,
+      ignoreEmptyUrls
+    );
 
     const initialMediaErrors = getInitialPlaylistErrors(newPlaylist);
     const newMediaErrors = {...mediaErrors,...initialMediaErrors};
 
-    newPlaylist = updatePlaylistPlayable(newPlaylist,newMediaErrors);//set 'playable'
+    newPlaylist = updatePlaylistPlayable(newPlaylist,newMediaErrors,props.filterPlayableTrack);//set 'playable'
     newPlaylist = updatePlaylistCurrent(newPlaylist,indices);//set 'current'
 
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST BUILT WITH "+newPlaylist.length+" TRACKS.",[...newPlaylist]);
@@ -920,7 +600,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
     if (!loadCount) return;
     setPlaylist(prevState => {
-      return updatePlaylistPlayable(prevState,mediaErrors);
+      return updatePlaylistPlayable(prevState,mediaErrors,props.filterPlayableTrack);
     })
   },[loadCount,mediaErrors])
 
