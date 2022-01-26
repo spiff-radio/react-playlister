@@ -23,6 +23,7 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
       index:url_index,
       current:undefined,
       playable:undefined,
+      autoplayable:undefined,
       sources:[]
     }
 
@@ -57,6 +58,7 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
           current:false,
           supported:ReactPlayer.canPlay(url),
           playable:undefined,
+          autoplayable:undefined,
           url:url,
           error:undefined,
           disabled:provider ? disabledProviders.includes(provider.key) : false,
@@ -258,7 +260,7 @@ export const getNextTrack = (playlist,track,autoskip,loop,backwards) => {
   return queue[0];
 }
 
-export const autoskipSourceFilter = source =>{
+const autoskipSourceFilter = source =>{
   return (source.playable && !source.disabled);
 }
 
@@ -275,7 +277,7 @@ export const getNextSource = (track,source,autoskip,loop,backwards) => {
   return queue[0];
 }
 
-export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn) => {
+export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn,filterAutoPlayableFn) => {
 
   if (!playlist.length) return playlist;
   if (mediaErrors === undefined) throw new Error("setPlayableItems() requires mediaErrors to be defined.");
@@ -293,10 +295,13 @@ export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn) => {
 
           const url = sourceItem.url;
           const mediaError = mediaErrors[url];
+          const playable = (sourceItem.supported && !mediaError);
+          const autoplayable = (playable && !sourceItem.disabled);
 
           return {
             ...sourceItem,
-            playable:(sourceItem.supported && !mediaError),
+            playable:playable,
+            autoplayable:autoplayable,
             error:mediaError
           }
         }
@@ -309,11 +314,22 @@ export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn) => {
       return source.playable;
     });
 
+    const autoPlayableSources = trackItem.sources.filter(function(source) {
+      return source.autoplayable;
+    });
+
     //is the track playable ?
     trackItem.playable = (playableSources.length > 0);
+    trackItem.autoplayable = (autoPlayableSources.length > 0);
+
     //allow to filter the playable value
     if ( typeof filterPlayableFn === 'function' ) {
       trackItem.playable = filterPlayableFn(trackItem.playable,trackItem);
+    }
+
+    //allow to filter the autoplayable value
+    if ( typeof filterAutoPlayableFn === 'function' ) {
+      trackItem.autoplayable = filterAutoPlayableFn(trackItem.autoplayable,trackItem);
     }
 
     //for debug

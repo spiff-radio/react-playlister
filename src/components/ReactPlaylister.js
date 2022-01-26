@@ -8,7 +8,6 @@ import {
   getCurrentIndices,
   getTracksQueue,
   getNextTrack,
-  autoskipSourceFilter,
   getSourcesQueue,
   getNextSource,
   setPlayableItems,
