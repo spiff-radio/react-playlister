@@ -4,6 +4,7 @@ import './ReactPlaylister.scss';
 import {
   getCurrentTrack,
   getCurrentSource,
+  getCurrentTrackSource,
   buildPlaylist,
   getTracksQueue,
   getNextTrack,
@@ -113,12 +114,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const newTrack = getNextTrack(playlist,currentTrack,true,loop,goReverse);
     const newTrackIndex = newTrack ? newTrack.index : undefined;
 
-    if (newTrack){
-      DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+reverseMsg+" TRACK #"+newTrackIndex);
-      setIndices(newTrackIndex);
-    }else{ //no more playable tracks
+    if (!newTrack){//no more playable tracks
       handlePlaylistEnded();
+      return;
     }
+
+    //get current source if any
+    let newSource = getCurrentTrackSource(newTrack);
+    if (!newSource){
+      //get first available source
+      newSource = getNextSource(newTrack,undefined,true);
+    }
+    const newSourceIndex = newSource ? newSource.index : undefined;
+
+    DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+reverseMsg+" TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
+    setIndices([newTrackIndex,newSourceIndex]);
+
   },[currentTrack,reverse,playlist,loop])
 
   const skipSource = useCallback((goReverse) => {

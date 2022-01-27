@@ -10,11 +10,15 @@ export function getCurrentTrack(playlist){
   });
 }
 
-export function getCurrentSource(playlist){
-  const track = getCurrentTrack(playlist);
+export function getCurrentTrackSource(track){
   return track?.sources.find(function(source) {
     return source.current;
   });
+}
+
+export function getCurrentSource(playlist){
+  const track = getCurrentTrack(playlist);
+  return getCurrentTrackSource(track);
 }
 
 export function getCurrentIndices(playlist){
