@@ -43,7 +43,6 @@ function App() {
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
-  const [autoskip, setAutoskip] = useState(true);
 
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
@@ -117,7 +116,6 @@ function App() {
       controls={playlisterControls}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       onTogglePlay={(bool) => setPlayRequest(bool)}
       onToggleLoop={(bool) => setLoop(bool)}
       onToggleShuffle={(bool) => setShuffle(bool)}
@@ -140,7 +138,6 @@ function App() {
       index={index}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       disabledProviders={['soundcloud']}
       //sortedProviders={['file']}
       ignoreUnsupportedUrls={false}

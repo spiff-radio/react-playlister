@@ -108,14 +108,6 @@ export const AppControls = props => {
           </p>
 
           <p>
-            <strong>autoskip</strong>
-            <span>{props.autoskip ? 'true' : 'false'}</span>&nbsp;
-            <button
-            onClick={(e) => handleAutoskip(!props.autoskip)}
-            >toggle</button><br/>
-          </p>
-
-          <p>
             <button
             onClick={handleGetReactPlayer}
             >Get ReactPlayer instance (see console)</button>

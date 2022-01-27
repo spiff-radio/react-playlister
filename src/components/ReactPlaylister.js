@@ -22,7 +22,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
-  const autoskip = props.autoskip ?? true;//ignore unplayable or disabled track & sources when skipping
   const sourceNotStartingTimeOutMs = 7000;
 
   const updateCount = useRef(0);
@@ -582,7 +581,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     })
 
 
-  }, [currentTrack,currentSource,loop,autoskip,shuffle]);
+  }, [currentTrack,currentSource,loop,shuffle]);
 
   //update 'loading' property of the controls
   useEffect(() => {
