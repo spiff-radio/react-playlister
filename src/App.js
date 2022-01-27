@@ -36,6 +36,7 @@ function App() {
   ]);
 
   const [index,setIndex] = useState([3,1]);
+  const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
 
@@ -47,6 +48,11 @@ function App() {
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
     setPlaylisterPlaylist(playlist);
+  }
+
+  const handleIndicesUpdated = (indices) => {
+    console.log("APP / INDICES UPDATED",indices);
+    setPlaylisterIndices(indices);
   }
 
   const handleControlsUpdated = (controls) => {
@@ -98,6 +104,7 @@ function App() {
           <AppFeedback
           urls={urls}
           playlist={playlisterPlaylist}
+          indices={playlisterIndices}
           controls={playlisterControls}
           onSelect={handleSourceSelect}
           />
@@ -105,6 +112,7 @@ function App() {
       </div>
       <AppControls
       playlister={playlisterRef}
+      indices={playlisterIndices}
       playlist={playlisterPlaylist}
       controls={playlisterControls}
       loop={loop}
@@ -168,6 +176,7 @@ function App() {
       /*
       Callback props
       */
+      onIndicesUpdated={handleIndicesUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistUpdated={handlePlaylistUpdated}
       onPlaylistEnded={handlePlaylistEnded}

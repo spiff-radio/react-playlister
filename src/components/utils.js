@@ -1,4 +1,4 @@
-import React, { useState, useCallback,useEffect  } from "react";
+import { useState, useCallback,useEffect  } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
@@ -124,8 +124,14 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
 
 }
 
-export const filterSupportedUrls = urls => {
-  return urls.filter(url=>ReactPlayer.canPlay(url))
+//build media errors based on URLs not supported
+export const getUrlNotSupportedErrorsFn = urls => {
+  let errors = {};
+  const unSupportedUrls = urls.filter(url=>!ReactPlayer.canPlay(url))
+  unSupportedUrls.forEach(function(url){
+    errors[url] = 'URL not supported';
+  });
+  return errors;
 }
 
 export const getUnsupportedUrls = playlist => {
@@ -139,24 +145,6 @@ export const getUnsupportedUrls = playlist => {
   return sources.map(source=>source.url)
 }
 
-export const getCurrentTrack = (playlist) => {
-  return playlist?.find(function(track) {
-    return track.current;
-  });
-}
-
-export const getCurrentSource = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  return track?.sources.find(function(source) {
-    return source.current;
-  });
-}
-
-export const getCurrentIndices = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  const source = getCurrentSource(playlist);
-  return [track?.index,source?.index];
-}
 
 const getProvidersOrder = (keys) => {
   if (!keys) return;
@@ -173,7 +161,7 @@ const getDisabledProviders = (keys) => {
 //build a queue of keys based on an array
 //If needle is NOT defined, it will return the full array.
 //If needle IS defined (and exists); it will return the items following the needle.
-const getArrayQueue = (array,needle,loop,backwards) => {
+const getArrayQueue = (array,needle,loop,reverse) => {
 
   let needleIndex = undefined;
   let previousQueue = [];
@@ -209,7 +197,7 @@ const getArrayQueue = (array,needle,loop,backwards) => {
     nextQueue = previousQueue = nextQueue.concat(previousQueue);
   }
 
-  if (backwards === true){
+  if (reverse === true){
     queue = previousQueue.reverse();
   }else{
     queue = nextQueue;
@@ -218,8 +206,8 @@ const getArrayQueue = (array,needle,loop,backwards) => {
   return queue;
 }
 
-export const getTracksQueue = (playlist,track,skipping,loop,backwards) => {
-  let queue = getArrayQueue(playlist,track,loop,backwards);
+export const getTracksQueue = (playlist,track,skipping,loop,reverse) => {
+  let queue = getArrayQueue(playlist,track,loop,reverse);
 
   if (skipping){
     queue = queue.filter(track => {
@@ -254,13 +242,13 @@ export const getTracksQueue = (playlist,track,skipping,loop,backwards) => {
   return queue;
 }
 
-export const getNextTrack = (playlist,track,skipping,loop,backwards) => {
-  let queue = getTracksQueue(playlist,track,skipping,loop,backwards);
+export const getNextTrack = (playlist,track,skipping,loop,reverse) => {
+  let queue = getTracksQueue(playlist,track,skipping,loop,reverse);
   return queue[0];
 }
 
-export const getSourcesQueue = (track,source,skipping,loop,backwards) => {
-  let queue = getArrayQueue(track?.sources,source,loop,backwards);
+export const getSourcesQueue = (track,source,skipping,loop,reverse) => {
+  let queue = getArrayQueue(track?.sources,source,loop,reverse);
   if (skipping){
     queue = queue.filter(source => {
       return source.autoplayable;
@@ -269,8 +257,8 @@ export const getSourcesQueue = (track,source,skipping,loop,backwards) => {
   return queue;
 }
 
-export const getNextSource = (track,source,skipping,loop,backwards) => {
-  const queue = getSourcesQueue(track,source,skipping,loop,backwards);
+export const getNextSource = (track,source,skipping,loop,reverse) => {
+  const queue = getSourcesQueue(track,source,skipping,loop,reverse);
   return queue[0];
 }
 
@@ -341,49 +329,8 @@ export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn,filterAut
   return playlist;
 }
 
-export const setCurrentItems = (playlist,indices) => {
-
-  if (!playlist.length) return playlist;
-  if (indices === undefined) throw new Error("setCurrentItems() requires indices to be defined.");
-
-  const trackIndex = indices[0];
-  const sourceIndex = indices[1];
-
-  if (trackIndex !== undefined){
-    playlist = playlist.map((trackItem) => {
-
-      const isCurrentTrack = (trackItem.index === trackIndex);
-
-      //for the selected track only
-      //update the 'current' property of its sources
-
-      const getUpdatedSources = (track) => {
-        return track.sources.map(
-          (sourceItem) => {
-            return {
-              ...sourceItem,
-              current:(sourceItem.index === sourceIndex)
-            }
-          }
-        )
-      }
-
-      return {
-        ...trackItem,
-        current:isCurrentTrack,
-        sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
-      }
-    });
-  }
-
-  DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
-
-  return playlist;
-
-}
-
 //santize indices; and select a default source if it is not set.
-export const validateIndices = (input,playlist)=>{
+export const validateIndices = (input,playlist,skipping)=>{
 
   if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
 
@@ -401,11 +348,9 @@ export const validateIndices = (input,playlist)=>{
     track = playlist.find(function(track) {
       return ( track.index === trackIndex );
     });
-  }
-
-  //reset source index
-  if (!track){
-    sourceIndex = undefined;
+    sourceIndex = !track ? undefined : sourceIndex;
+  }else{
+    track = getNextTrack(playlist,undefined,skipping);
   }
 
   if (track){
@@ -424,7 +369,7 @@ export const validateIndices = (input,playlist)=>{
     }
     //get default source
     if (!source){
-      source = getNextSource(track);
+      source = getNextSource(track,undefined,skipping);
     }
   }
 
@@ -440,15 +385,20 @@ export const validateIndices = (input,playlist)=>{
     return;
   }
 
+  if ( Array.isArray(input) && ( JSON.stringify(newIndices) === JSON.stringify(input) ) ){
+    console.log("INDICES NOT UPDATED");
+    return input;
+  }
+
   if (indices !== newIndices){
-    DEBUG && console.log("REACTPLAYLISTER / INDICES FROM > TO",indices,newIndices);
+    DEBUG && console.log("REACTPLAYLISTER / INDICES FIXED FROM "+JSON.stringify(input)+" TO "+JSON.stringify(newIndices));
   }
 
   return newIndices;
 
 }
 
-export function useSanitizedIndices (sanitizeIndicesFn, unsanitizedIndex) {
+export function useSanitizedIndices(sanitizeIndicesFn, unsanitizedIndex) {
   const [index, setIndex] = useState(sanitizeIndicesFn(unsanitizedIndex));
 
   // Like setIndex, but also sanitizes
@@ -464,4 +414,22 @@ export function useSanitizedIndices (sanitizeIndicesFn, unsanitizedIndex) {
   );
 
   return [index, setSanitizedIndices];
+}
+
+export function useBuiltPlaylist(buildPlaylistFn, urls) {
+  const [playlist, setPlaylist] = useState(buildPlaylistFn(urls));
+
+  // Like set state, but also generates playlist
+  const setBuiltPlaylist = useCallback(
+    (urls) => setPlaylist(buildPlaylistFn(urls)),
+    [buildPlaylistFn, setPlaylist],
+  );
+
+  // Update state if arguments change
+  useEffect(
+    () => setBuiltPlaylist(urls),
+    [JSON.stringify(setBuiltPlaylist), urls],
+  );
+
+  return [playlist, setBuiltPlaylist];
 }

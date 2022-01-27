@@ -4,19 +4,11 @@ export const AppControls = props => {
 
   const playlist = props.playlist;
   const controls = props.controls;
+  const indices = props.indices;
   const playlisterRef = props.playlister;
 
-  //get current track & source
-  const track = playlist?.find(function(track) {
-    return track.current;
-  });
-
-  const source = track?.sources.find(function(source) {
-    return source.current;
-  });
-
-  const trackIndex = track?.index;
-  const sourceIndex = source?.index;
+  const trackIndex = indices ? indices[0] : undefined;
+  const sourceIndex = indices ? indices[1] : undefined;
 
   const hasPreviousTrack = controls?.has_previous_track;
   const hasNextTrack = controls?.has_next_track;
