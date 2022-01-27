@@ -73,11 +73,8 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   const [playlist,setPlaylist] = useState(initialPlaylist);
 
-  const currentTrack = getCurrentTrack(playlist);
-  const currentSource = getCurrentSource(playlist);
-
-  console.log("!!!TRACK",currentTrack);
-  console.log("!!!SOURCE",currentSource);
+  const [currentTrack, setCurrentTrack] = useState();
+  const [currentSource, setCurrentSource] = useState();
 
   const [url, setUrl] = useState();//url for ReactPlayer
 
@@ -89,6 +86,18 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     playing:false,
     loading:false,
   });
+
+
+  useEffect(()=>{
+    console.log("INDICES UPDATED",indices);
+    const updatedPlaylist = setCurrentItems(playlist,indices);
+    setPlaylist(updatedPlaylist);
+  },[indices])
+
+  useEffect(()=>{
+    setCurrentTrack(getCurrentTrack(playlist));
+    setCurrentSource(getCurrentSource(playlist));
+  },[playlist])
 
 
   const skipTrack = useCallback((goReverse) => {
@@ -110,7 +119,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }else{ //no more playable tracks
       handlePlaylistEnded();
     }
-  },[reverse,playlist,loop])
+  },[currentTrack,reverse,playlist,loop])
 
   const skipSource = useCallback((goReverse) => {
 
@@ -351,10 +360,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   useEffect(()=>{
-    console.log("INDICES UPDATED",indices);
-    const updatedPlaylist = setCurrentItems(playlist,indices);
-    setPlaylist(updatedPlaylist);
-  },[indices])
+    console.log("!!!CURR TRACK",currentTrack);
+  },[currentTrack])
+
+  useEffect(()=>{
+    console.log("!!!CURR SRC",currentSource);
+  },[currentSource])
 
   useEffect(()=>{
     console.log("MEDIA ERRORS UPDATED",mediaErrors);
@@ -379,10 +390,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setPlayLoading(false);
     setMediaLoaded(false);
     setMediaStarted(false);
-  },[indices])
+  },[currentTrack,currentSource])
 
 
-  ////States relationships
+  useEffect(()=>{
+    setIndices(props.index);
+  },[props.index])
 
   //update the "playing" state from props
   useEffect(()=>{
@@ -472,16 +485,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     console.log("YEATH INDICES",indices);
 
-    if (!currentTrack){
-      console.log("!!!NO TRACK SET");
-    }
+    if (!currentTrack) return;
 
 
     if (!currentSource){
       console.log("!!!NO SOURCE SET");
       return;
     }
-
 
     if (!playRequest) return;
 
@@ -512,7 +522,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipTrack();
 
 
-  }, [indices]);
+  }, [currentTrack,currentSource]);
 
   //update tracks history
   //TOUFIX TOUCHECK
@@ -615,13 +625,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
       props.onPlaylistUpdated(playlist);
     }
   }, [playlist]);
-
-  //warn parent that the playlist has been updated
-  useEffect(() => {
-    if (typeof props.onIndicesUpdated === 'function') {
-      props.onIndicesUpdated(indices);
-    }
-  }, [indices]);
 
   //warn parent that the playlist has been updated
   useEffect(() => {
