@@ -3,6 +3,27 @@ import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 const DEBUG = (process.env.NODE_ENV !== 'production');
+
+export function getCurrentTrack(playlist){
+  return playlist?.find(function(track) {
+    return track.current;
+  });
+}
+
+export function getCurrentSource(playlist){
+  const track = getCurrentTrack(playlist);
+  return track?.sources.find(function(source) {
+    return source.current;
+  });
+}
+
+export function getCurrentIndices(playlist){
+  const track = getCurrentTrack(playlist);
+  const source = getCurrentSource(playlist);
+  return [track?.index,source?.index];
+}
+
+
 /*
 Build Playlist
 */
@@ -329,8 +350,51 @@ export const setPlayableItems = (playlist,mediaErrors,filterPlayableFn,filterAut
   return playlist;
 }
 
-//santize indices; and select a default source if it is not set.
-export const validateIndices = (input,playlist,skipping)=>{
+export const setCurrentItems = (playlist,indices) => {
+
+  if (!playlist.length) return playlist;
+  if (indices === undefined) throw new Error("setCurrentItems() requires indices to be defined.");
+
+  indices = validateIndices(indices,playlist);
+
+  const trackIndex = indices[0];
+  const sourceIndex = indices[1];
+
+  if (trackIndex !== undefined){
+    playlist = playlist.map((trackItem) => {
+
+      const isCurrentTrack = (trackItem.index === trackIndex);
+
+      //for the selected track only
+      //update the 'current' property of its sources
+
+      const getUpdatedSources = (track) => {
+        return track.sources.map(
+          (sourceItem) => {
+            return {
+              ...sourceItem,
+              current:(sourceItem.index === sourceIndex)
+            }
+          }
+        )
+      }
+
+      return {
+        ...trackItem,
+        current:isCurrentTrack,
+        sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
+      }
+    });
+  }
+
+  DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
+
+  return playlist;
+
+}
+
+//format indices the right way + ensure that they exists in the playlist
+export const validateIndices = (input,playlist)=>{
 
   if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
 
@@ -343,14 +407,10 @@ export const validateIndices = (input,playlist,skipping)=>{
   let track = undefined;
   let source = undefined;
 
-  //get index track
   if (trackIndex !== undefined){
     track = playlist.find(function(track) {
       return ( track.index === trackIndex );
     });
-    sourceIndex = !track ? undefined : sourceIndex;
-  }else{
-    track = getNextTrack(playlist,undefined,skipping);
   }
 
   if (track){
@@ -361,36 +421,14 @@ export const validateIndices = (input,playlist,skipping)=>{
       });
     }
 
-    //get current source
-    if (!source){
-      source = track?.sources.find(function(source) {
-        return source.current;
-      });
-    }
-    //get default source
-    if (!source){
-      source = getNextSource(track,undefined,skipping);
-    }
   }
 
   trackIndex = track ? track.index : undefined;
   sourceIndex = source ? source.index : undefined;
 
-  newIndices = [trackIndex,sourceIndex].filter(function(x) {
-    return x !== undefined;
-  });
+  newIndices = [trackIndex,sourceIndex];
 
-  if (!newIndices.length){
-    //DEBUG && console.log("REACTPLAYLISTER / INVALID INDICES, ABORD");
-    return;
-  }
-
-  if ( Array.isArray(input) && ( JSON.stringify(newIndices) === JSON.stringify(input) ) ){
-    console.log("INDICES NOT UPDATED");
-    return input;
-  }
-
-  if (indices !== newIndices){
+  if ( JSON.stringify(newIndices) !== JSON.stringify(input) ){
     DEBUG && console.log("REACTPLAYLISTER / INDICES FIXED FROM "+JSON.stringify(input)+" TO "+JSON.stringify(newIndices));
   }
 
@@ -410,26 +448,26 @@ export function useSanitizedIndices(sanitizeIndicesFn, unsanitizedIndex) {
   // Update state if arguments change
   useEffect(
     () => setSanitizedIndices(unsanitizedIndex),
-    [setSanitizedIndices, unsanitizedIndex],
+    [JSON.stringify(setSanitizedIndices), unsanitizedIndex],
   );
 
   return [index, setSanitizedIndices];
 }
 
-export function useBuiltPlaylist(buildPlaylistFn, urls) {
-  const [playlist, setPlaylist] = useState(buildPlaylistFn(urls));
+export function usePlaylistFromUrls(createFn, urls) {
+  const [playlist, setPlaylist] = useState(createFn(urls));
 
   // Like set state, but also generates playlist
-  const setBuiltPlaylist = useCallback(
-    (urls) => setPlaylist(buildPlaylistFn(urls)),
-    [buildPlaylistFn, setPlaylist],
+  const setOutputPlaylist = useCallback(
+    (urls) => setPlaylist(createFn(urls)),
+    [createFn, setPlaylist],
   );
 
   // Update state if arguments change
   useEffect(
-    () => setBuiltPlaylist(urls),
-    [JSON.stringify(setBuiltPlaylist), urls],
+    () => setOutputPlaylist(urls),
+    [JSON.stringify(setOutputPlaylist), urls],
   );
 
-  return [playlist, setBuiltPlaylist];
+  return [playlist, setOutputPlaylist];
 }

@@ -35,7 +35,7 @@ function App() {
 
   ]);
 
-  const [index,setIndex] = useState([3,1]);
+  const [index,setIndex] = useState([1,2]);
   const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
@@ -103,7 +103,6 @@ function App() {
           <AppFeedback
           urls={urls}
           playlist={playlisterPlaylist}
-          indices={playlisterIndices}
           controls={playlisterControls}
           onSelect={handleSourceSelect}
           />
@@ -111,7 +110,6 @@ function App() {
       </div>
       <AppControls
       playlister={playlisterRef}
-      indices={playlisterIndices}
       playlist={playlisterPlaylist}
       controls={playlisterControls}
       loop={loop}

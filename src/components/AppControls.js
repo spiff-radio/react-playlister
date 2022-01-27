@@ -1,4 +1,5 @@
 import React from "react";
+import { getCurrentTrack,getCurrentSource } from "./utils.js";
 
 export const AppControls = props => {
 
@@ -7,8 +8,11 @@ export const AppControls = props => {
   const indices = props.indices;
   const playlisterRef = props.playlister;
 
-  const trackIndex = indices ? indices[0] : undefined;
-  const sourceIndex = indices ? indices[1] : undefined;
+  const currentTrack = getCurrentTrack(playlist);
+  const currentSource = getCurrentSource(playlist);
+
+  const trackIndex = currentTrack?.index;
+  const sourceIndex = currentSource?.index;
 
   const hasPreviousTrack = controls?.has_previous_track;
   const hasNextTrack = controls?.has_next_track;

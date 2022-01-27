@@ -2,15 +2,19 @@ import React, { useState, useCallback,useEffect, useRef, forwardRef, useImperati
 import ReactPlayer from 'react-player';
 import './ReactPlaylister.scss';
 import {
+  getCurrentTrack,
+  getCurrentSource,
   buildPlaylist,
   getTracksQueue,
   getNextTrack,
   getSourcesQueue,
   getNextSource,
   setPlayableItems,
+  setCurrentItems,
   validateIndices,
   useSanitizedIndices,
-  useBuiltPlaylist,
+  usePlaylistFromUrls,
+  useFilledPlaylist,
   getUrlNotSupportedErrorsFn
 } from './utils.js';
 
@@ -64,28 +68,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     props.filterPlayableTrack
   ]);
 
-  const [playlist, setPlaylist] = useBuiltPlaylist(buildPlaylistFn,props.urls);
+  const [initialPlaylist,setInitialPlaylistFromUrls] = usePlaylistFromUrls(buildPlaylistFn,props.urls);
+  const [indices, setIndices] = useState(props.index);
 
-  // https://stackoverflow.com/a/70862465/782013
-  // useCallback memoizes the function so that it's not recreated on every
-  // render. This also prevents the custom hook from looping infinintely
-  const sanitizeIndicesFn = useCallback((rawIndices) => {
-    if (!playlist) return;
-    // Whatever you actually do to sanitize the index goes in here,
-    // but I'll just use the makeEven function for this example
-    return validateIndices(rawIndices,playlist);
-    // If you use other variables in this function which are defined in this
-    // component (e.g. you mentioned an array state of some kind), you'll need
-    // to include them in the dependency array below:
-  }, [playlist]);
+  const [playlist,setPlaylist] = useState(initialPlaylist);
 
-  // Now simply use the sanitized index where you need it,
-  // and the setter will sanitize for you when setting it (like in the
-  // click handler in the button below)
-  const [indices, setSanitizedIndices] = useSanitizedIndices(sanitizeIndicesFn,props.index);
+  const currentTrack = getCurrentTrack(playlist);
+  const currentSource = getCurrentSource(playlist);
 
-  const currentTrack = playlist[indices[0]];
-  const currentSource = currentTrack.sources[indices[1]];
+  console.log("!!!TRACK",currentTrack);
+  console.log("!!!SOURCE",currentSource);
 
   const [url, setUrl] = useState();//url for ReactPlayer
 
@@ -114,7 +106,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     if (newTrack){
       DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+reverseMsg+" TRACK #"+newTrackIndex);
-      setSanitizedIndices(newTrackIndex);
+      setIndices(newTrackIndex);
     }else{ //no more playable tracks
       handlePlaylistEnded();
     }
@@ -141,7 +133,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / SKIP"+reverseMsg+" FROM TRACK #"+currentSource.trackIndex+" SOURCE #"+currentSource.index+" TO TRACK #"+newSource.trackIndex+" SOURCE #"+newSource.index);
 
-    setSanitizedIndices([currentTrack.index,newSource.index]);
+    setIndices([currentTrack.index,newSource.index]);
 
   },[reverse,currentTrack,currentSource])
 
@@ -359,21 +351,23 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   useEffect(()=>{
-    console.log("!!!MEDIA ERRORS SET YO",mediaErrors);
+    console.log("INDICES UPDATED",indices);
+    const updatedPlaylist = setCurrentItems(playlist,indices);
+    setPlaylist(updatedPlaylist);
+  },[indices])
+
+  useEffect(()=>{
+    console.log("MEDIA ERRORS UPDATED",mediaErrors);
   },[mediaErrors])
 
   useEffect(()=>{
-    console.log("!!!PLAYLIST SET YO",playlist);
+    console.log("PLAYLIST UPDATED",playlist);
   },[playlist])
-
-  useEffect(()=>{
-    console.log("!!!INDICES SET YO",indices);
-  },[indices])
 
   //set indices playlist at init & when prop changes
   /*
   useEffect(()=>{
-    setSanitizedIndices(props.index);
+    setIndices(props.index);
   },[props.index])
   */
   //reset
@@ -473,29 +467,22 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     });
   },[loading])
 
-  //update tracks history
-  //TOUFIX TOUCHECK
+  //skip to something if some indices are undefined
   useEffect(() => {
 
-    if (!currentTrack) return;
+    console.log("YEATH INDICES",indices);
 
-    const trackIndex = currentTrack.index;
+    if (!currentTrack){
+      console.log("!!!NO TRACK SET");
+    }
 
-    const history = trackHistory.current;
-    const lastHistoryIndex = history.length - 1;
 
-    const lastItem = history[lastHistoryIndex];
-    if (lastItem === trackIndex) return;
+    if (!currentSource){
+      console.log("!!!NO SOURCE SET");
+      return;
+    }
 
-    trackHistory.current = [...history, trackIndex];
 
-    console.log("REACTPLAYLISTER / UPDATE TRACKS HISTORY",trackHistory.current);
-
-  }, [currentTrack]);
-
-  /*
-  //check that we can stay on this track/source; else skip.
-  useEffect(() => {
     if (!playRequest) return;
 
     let doSkip = false;
@@ -525,8 +512,27 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     skipTrack();
 
 
+  }, [indices]);
+
+  //update tracks history
+  //TOUFIX TOUCHECK
+  useEffect(() => {
+
+    if (!currentTrack) return;
+
+    const trackIndex = currentTrack.index;
+
+    const history = trackHistory.current;
+    const lastHistoryIndex = history.length - 1;
+
+    const lastItem = history[lastHistoryIndex];
+    if (lastItem === trackIndex) return;
+
+    trackHistory.current = [...history, trackIndex];
+
+    console.log("REACTPLAYLISTER / UPDATE TRACKS HISTORY",trackHistory.current);
+
   }, [currentTrack]);
-  */
 
   //set source URL
   useEffect(() => {
@@ -586,10 +592,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //update 'loading' property of the controls
   useEffect(() => {
 
-    if (loading){
-      DEBUG &&console.log("STARTED LOADING TRACK#"+currentSource.trackIndex+" SOURCE#"+currentSource.index);
-    }else{
-      DEBUG &&console.log("FINISHED LOADING TRACK#"+currentSource.trackIndex+" SOURCE#"+currentSource.index);
+    if (currentSource){
+      if (loading){
+        DEBUG &&console.log("STARTED LOADING TRACK#"+currentSource.trackIndex+" SOURCE#"+currentSource.index);
+      }else{
+        DEBUG &&console.log("FINISHED LOADING TRACK#"+currentSource.trackIndex+" SOURCE#"+currentSource.index);
+      }
     }
 
     setControls(prevState => {

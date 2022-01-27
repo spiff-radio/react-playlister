@@ -70,7 +70,7 @@ export const AppFeedback = props => {
       <ul>
         {
           props.sources.map((source,index) => {
-            const isSelected = (currentSourceIndex === index);
+            const isSelected = source.current;
             const isCurrent = props.current && isSelected;
 
             return(
@@ -112,8 +112,7 @@ content
         {
           playlist.map((track,index) => {
 
-            const isCurrent = (index === indices[0]);
-            const sourceIndex = isCurrent ? indices[1] : undefined;
+            const isCurrent = track.current;
 
             return (
               <li
@@ -130,7 +129,6 @@ content
                 sources={track.sources}
                 current={isCurrent}
                 trackIndex={index}
-                sourceIndex={sourceIndex}
                 onSelect={props.onSelect}
                 />
               </li>
