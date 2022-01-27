@@ -119,7 +119,6 @@ function App() {
       onTogglePlay={(bool) => setPlayRequest(bool)}
       onToggleLoop={(bool) => setLoop(bool)}
       onToggleShuffle={(bool) => setShuffle(bool)}
-      onToggleAutoskip={(bool) => setAutoskip(bool)}
       />
       <ReactPlaylister
       ref={playlisterRef}

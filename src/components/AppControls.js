@@ -33,12 +33,6 @@ export const AppControls = props => {
     }
   }
 
-  const handleAutoskip = (bool) => {
-    if (typeof props.onToggleAutoskip === 'function') {
-      props.onToggleAutoskip(bool);
-    }
-  }
-
   const handleGetReactPlayer = (e) => {
     e.preventDefault();
     const player = playlisterRef.current.getReactPlayer();
