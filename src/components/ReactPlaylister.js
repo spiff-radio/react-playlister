@@ -13,10 +13,11 @@ import {
   setPlayableItems,
   setCurrentItems,
   validateIndices,
-  useSanitizedIndices,
   usePlaylistFromUrls,
   useFilledPlaylist,
-  getUrlNotSupportedErrorsFn
+  getNotSupportedMediaErrors,
+  getSkipTrackIndices,
+  getSkipSourceIndices
 } from './utils.js';
 
 
@@ -52,11 +53,10 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //object containing url (as key) - error message (as value)
   //this way, errors can be shared by sources having the same URL.
 
-  const [mediaErrors, setMediaErrors] = useState(getUrlNotSupportedErrorsFn(props.urls.flat(Infinity)));
+  const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls.flat(Infinity)));
 
   const buildPlaylistFn = useCallback((urls) => {
     let playlist = buildPlaylist(urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
-
     playlist = setPlayableItems(playlist,mediaErrors,props.filterPlayableTrack);
     return playlist;
   },[
@@ -70,6 +70,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   ]);
 
   const [initialPlaylist,setInitialPlaylistFromUrls] = usePlaylistFromUrls(buildPlaylistFn,props.urls);
+
+  console.log("!!!INITIALPLAYLIST",initialPlaylist);
+
   const [indices, setIndices] = useState(props.index);
 
   const [playlist,setPlaylist] = useState(initialPlaylist);
@@ -90,7 +93,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
 
   useEffect(()=>{
-    console.log("INDICES UPDATED",indices);
     const updatedPlaylist = setCurrentItems(playlist,indices);
     setPlaylist(updatedPlaylist);
   },[indices])
@@ -100,7 +102,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setCurrentSource(getCurrentSource(playlist));
   },[playlist])
 
-
   const skipTrack = useCallback((goReverse) => {
 
     setSkipping(true);
@@ -109,26 +110,17 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     goReverse = (goReverse !== undefined) ? goReverse : reverse;
     setReverse(goReverse);
 
-    const reverseMsg = goReverse ? 'TO PREVIOUS' : 'TO NEXT';
+    const skipIndices = getSkipTrackIndices(playlist,currentTrack,loop,goReverse);
 
-    const newTrack = getNextTrack(playlist,currentTrack,true,loop,goReverse);
-    const newTrackIndex = newTrack ? newTrack.index : undefined;
-
-    if (!newTrack){//no more playable tracks
+    if (skipIndices === undefined){//no indices found
       handlePlaylistEnded();
       return;
     }
 
-    //get current source if any
-    let newSource = getCurrentTrackSource(newTrack);
-    if (!newSource){
-      //get first available source
-      newSource = getNextSource(newTrack,undefined,true);
-    }
-    const newSourceIndex = newSource ? newSource.index : undefined;
+    const reverseMsg = goReverse ? 'TO PREVIOUS' : 'TO NEXT';
+    DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack?.index+" "+reverseMsg+" TRACK #"+skipIndices[0]+" SOURCE #"+skipIndices[1]);
 
-    DEBUG && console.log("REACTPLAYLISTER / SKIP FROM TRACK #"+currentTrack.index+" "+reverseMsg+" TRACK #"+newTrackIndex+" SOURCE #"+newSourceIndex);
-    setIndices([newTrackIndex,newSourceIndex]);
+    setIndices(skipIndices);
 
   },[currentTrack,reverse,playlist,loop])
 
@@ -142,18 +134,16 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     const reverseMsg = goReverse ? ' TO PREVIOUS' : ' TO NEXT';
 
-    //try to find another playable source for this track
-    const newSource = getNextSource(currentTrack,currentSource,true,true,goReverse);
+    const skipIndices = getSkipSourceIndices(currentTrack,currentSource,goReverse);
 
-    //no source found, skip track
-    if (newSource === undefined){
+    if (indices === undefined){//no source found, skip track
       skipTrack(goReverse);
       return;
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / SKIP"+reverseMsg+" FROM TRACK #"+currentSource.trackIndex+" SOURCE #"+currentSource.index+" TO TRACK #"+newSource.trackIndex+" SOURCE #"+newSource.index);
+    DEBUG && console.log("REACTPLAYLISTER / SKIP"+reverseMsg+" FROM TRACK #"+currentSource.trackIndex+" SOURCE #"+currentSource.index+" TO TRACK #"+skipIndices[0]+" SOURCE #"+skipIndices[1]);
 
-    setIndices([currentTrack.index,newSource.index]);
+    setIndices(skipIndices);
 
   },[reverse,currentTrack,currentSource])
 
@@ -371,14 +361,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   }
 
   useEffect(()=>{
-    console.log("!!!CURR TRACK",currentTrack);
-  },[currentTrack])
-
-  useEffect(()=>{
-    console.log("!!!CURR SRC",currentSource);
-  },[currentSource])
-
-  useEffect(()=>{
     console.log("MEDIA ERRORS UPDATED",mediaErrors);
   },[mediaErrors])
 
@@ -581,6 +563,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     //TRACK
     const previousTracksQueue = getTracksQueue(playlist,currentTrack,true,loop,true);
     const nextTracksQueue = getTracksQueue(playlist,currentTrack,true,loop,false);
+
     //SOURCE
     const previousSourcesQueue = getSourcesQueue(currentTrack,currentSource,true,false,true);
     const nextSourcesQueue = getSourcesQueue(currentTrack,currentSource,true,false,false);
@@ -641,6 +624,14 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     updateCount.current = updateCount.current + 1;
     console.log("REACTPLAYLISTER RENDERED",updateCount.current);
   });
+
+  useEffect(()=>{
+    console.log("!!!CURR TRACK",currentTrack);
+  },[currentTrack])
+
+  useEffect(()=>{
+    console.log("!!!CURR SRC",currentSource);
+  },[currentSource])
 
 
   //methods parent can use
