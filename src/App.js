@@ -35,25 +35,23 @@ function App() {
 
   ]);
 
-  const [index,setIndex] = useState([3,1]);
+  const [index,setIndex] = useState([1,2]);
+  const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
-  const [autoskip, setAutoskip] = useState(true);
-
-  //sync the playRequest state with the media playing state:
-  //(eg. because we've used the Youtube controls to play the media instead of our play button)
-  useEffect(() => {
-    if (!playlisterControls) return;
-    setPlayRequest(playlisterControls.playing);
-  }, [playlisterControls]);
 
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
     setPlaylisterPlaylist(playlist);
+  }
+
+  const handleIndicesUpdated = (indices) => {
+    console.log("APP / INDICES UPDATED",indices);
+    setPlaylisterIndices(indices);
   }
 
   const handleControlsUpdated = (controls) => {
@@ -116,11 +114,9 @@ function App() {
       controls={playlisterControls}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       onTogglePlay={(bool) => setPlayRequest(bool)}
       onToggleLoop={(bool) => setLoop(bool)}
       onToggleShuffle={(bool) => setShuffle(bool)}
-      onToggleAutoskip={(bool) => setAutoskip(bool)}
       />
       <ReactPlaylister
       ref={playlisterRef}
@@ -139,7 +135,6 @@ function App() {
       index={index}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       disabledProviders={['soundcloud']}
       //sortedProviders={['file']}
       ignoreUnsupportedUrls={false}
@@ -175,6 +170,7 @@ function App() {
       /*
       Callback props
       */
+      onIndicesUpdated={handleIndicesUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistUpdated={handlePlaylistUpdated}
       onPlaylistEnded={handlePlaylistEnded}

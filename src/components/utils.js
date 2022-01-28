@@ -1,7 +1,33 @@
+import { useState, useCallback,useEffect  } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
 const DEBUG = (process.env.NODE_ENV !== 'production');
+
+export function getCurrentTrack(playlist){
+  return playlist?.find(function(track) {
+    return track.current;
+  });
+}
+
+export function getCurrentTrackSource(track){
+  return track?.sources.find(function(source) {
+    return source.current;
+  });
+}
+
+export function getCurrentSource(playlist){
+  const track = getCurrentTrack(playlist);
+  return getCurrentTrackSource(track);
+}
+
+export function getCurrentIndices(playlist){
+  const track = getCurrentTrack(playlist);
+  const source = getCurrentSource(playlist);
+  return [track?.index,source?.index];
+}
+
+
 /*
 Build Playlist
 */
@@ -123,8 +149,14 @@ export const buildPlaylist = (trackUrls,sortedProviders,disabledProviders,ignore
 
 }
 
-export const filterSupportedUrls = urls => {
-  return urls.filter(url=>ReactPlayer.canPlay(url))
+//build media errors based on URLs not supported
+export const getUrlNotSupportedErrorsFn = urls => {
+  let errors = {};
+  const unSupportedUrls = urls.filter(url=>!ReactPlayer.canPlay(url))
+  unSupportedUrls.forEach(function(url){
+    errors[url] = 'URL not supported';
+  });
+  return errors;
 }
 
 export const getUnsupportedUrls = playlist => {
@@ -138,24 +170,6 @@ export const getUnsupportedUrls = playlist => {
   return sources.map(source=>source.url)
 }
 
-export const getCurrentTrack = (playlist) => {
-  return playlist?.find(function(track) {
-    return track.current;
-  });
-}
-
-export const getCurrentSource = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  return track?.sources.find(function(source) {
-    return source.current;
-  });
-}
-
-export const getCurrentIndices = (playlist) => {
-  const track = getCurrentTrack(playlist);
-  const source = getCurrentSource(playlist);
-  return [track?.index,source?.index];
-}
 
 const getProvidersOrder = (keys) => {
   if (!keys) return;
@@ -172,7 +186,7 @@ const getDisabledProviders = (keys) => {
 //build a queue of keys based on an array
 //If needle is NOT defined, it will return the full array.
 //If needle IS defined (and exists); it will return the items following the needle.
-const getArrayQueue = (array,needle,loop,backwards) => {
+const getArrayQueue = (array,needle,loop,reverse) => {
 
   let needleIndex = undefined;
   let previousQueue = [];
@@ -208,7 +222,7 @@ const getArrayQueue = (array,needle,loop,backwards) => {
     nextQueue = previousQueue = nextQueue.concat(previousQueue);
   }
 
-  if (backwards === true){
+  if (reverse === true){
     queue = previousQueue.reverse();
   }else{
     queue = nextQueue;
@@ -217,8 +231,8 @@ const getArrayQueue = (array,needle,loop,backwards) => {
   return queue;
 }
 
-export const getTracksQueue = (playlist,track,skipping,loop,backwards) => {
-  let queue = getArrayQueue(playlist,track,loop,backwards);
+export const getTracksQueue = (playlist,track,skipping,loop,reverse) => {
+  let queue = getArrayQueue(playlist,track,loop,reverse);
 
   if (skipping){
     queue = queue.filter(track => {
@@ -253,13 +267,13 @@ export const getTracksQueue = (playlist,track,skipping,loop,backwards) => {
   return queue;
 }
 
-export const getNextTrack = (playlist,track,skipping,loop,backwards) => {
-  let queue = getTracksQueue(playlist,track,skipping,loop,backwards);
+export const getNextTrack = (playlist,track,skipping,loop,reverse) => {
+  let queue = getTracksQueue(playlist,track,skipping,loop,reverse);
   return queue[0];
 }
 
-export const getSourcesQueue = (track,source,skipping,loop,backwards) => {
-  let queue = getArrayQueue(track?.sources,source,loop,backwards);
+export const getSourcesQueue = (track,source,skipping,loop,reverse) => {
+  let queue = getArrayQueue(track?.sources,source,loop,reverse);
   if (skipping){
     queue = queue.filter(source => {
       return source.autoplayable;
@@ -268,8 +282,8 @@ export const getSourcesQueue = (track,source,skipping,loop,backwards) => {
   return queue;
 }
 
-export const getNextSource = (track,source,skipping,loop,backwards) => {
-  const queue = getSourcesQueue(track,source,skipping,loop,backwards);
+export const getNextSource = (track,source,skipping,loop,reverse) => {
+  const queue = getSourcesQueue(track,source,skipping,loop,reverse);
   return queue[0];
 }
 
@@ -345,6 +359,8 @@ export const setCurrentItems = (playlist,indices) => {
   if (!playlist.length) return playlist;
   if (indices === undefined) throw new Error("setCurrentItems() requires indices to be defined.");
 
+  indices = validateIndices(indices,playlist);
+
   const trackIndex = indices[0];
   const sourceIndex = indices[1];
 
@@ -381,7 +397,7 @@ export const setCurrentItems = (playlist,indices) => {
 
 }
 
-//santize indices; and select a default source if it is not set.
+//format indices the right way + ensure that they exists in the playlist
 export const validateIndices = (input,playlist)=>{
 
   if (!playlist) throw new Error("validateIndices() requires a playlist to be defined.");
@@ -395,16 +411,10 @@ export const validateIndices = (input,playlist)=>{
   let track = undefined;
   let source = undefined;
 
-  //get index track
   if (trackIndex !== undefined){
     track = playlist.find(function(track) {
       return ( track.index === trackIndex );
     });
-  }
-
-  //reset source index
-  if (!track){
-    sourceIndex = undefined;
   }
 
   if (track){
@@ -415,16 +425,6 @@ export const validateIndices = (input,playlist)=>{
       });
     }
 
-    //get current source
-    if (!source){
-      source = track?.sources.find(function(source) {
-        return source.current;
-      });
-    }
-    //get default source
-    if (!source){
-      source = getNextSource(track);
-    }
   }
 
   trackIndex = track ? track.index : undefined;
@@ -432,8 +432,46 @@ export const validateIndices = (input,playlist)=>{
 
   newIndices = [trackIndex,sourceIndex];
 
-  return newIndices.filter(function(x) {
-    return x !== undefined;
-  });
+  if ( JSON.stringify(newIndices) !== JSON.stringify(input) ){
+    DEBUG && console.log("REACTPLAYLISTER / INDICES FIXED FROM "+JSON.stringify(input)+" TO "+JSON.stringify(newIndices));
+  }
 
+  return newIndices;
+
+}
+
+export function useSanitizedIndices(sanitizeIndicesFn, unsanitizedIndex) {
+  const [index, setIndex] = useState(sanitizeIndicesFn(unsanitizedIndex));
+
+  // Like setIndex, but also sanitizes
+  const setSanitizedIndices = useCallback(
+    (unsanitizedIndex) => setIndex(sanitizeIndicesFn(unsanitizedIndex)),
+    [sanitizeIndicesFn, setIndex],
+  );
+
+  // Update state if arguments change
+  useEffect(
+    () => setSanitizedIndices(unsanitizedIndex),
+    [JSON.stringify(setSanitizedIndices), unsanitizedIndex],
+  );
+
+  return [index, setSanitizedIndices];
+}
+
+export function usePlaylistFromUrls(createFn, urls) {
+  const [playlist, setPlaylist] = useState(createFn(urls));
+
+  // Like set state, but also generates playlist
+  const setOutputPlaylist = useCallback(
+    (urls) => setPlaylist(createFn(urls)),
+    [createFn, setPlaylist],
+  );
+
+  // Update state if arguments change
+  useEffect(
+    () => setOutputPlaylist(urls),
+    [JSON.stringify(setOutputPlaylist), urls],
+  );
+
+  return [playlist, setOutputPlaylist];
 }
