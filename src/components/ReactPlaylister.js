@@ -387,11 +387,9 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[playlist])
 
   //set indices playlist at init & when prop changes
-  /*
   useEffect(()=>{
     setIndices(props.index);
   },[props.index])
-  */
   //reset
 
   useEffect(()=>{
@@ -402,11 +400,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     setMediaLoaded(false);
     setMediaStarted(false);
   },[currentTrack,currentSource])
-
-
-  useEffect(()=>{
-    setIndices(props.index);
-  },[props.index])
 
   //update the "playing" state from props
   useEffect(()=>{
