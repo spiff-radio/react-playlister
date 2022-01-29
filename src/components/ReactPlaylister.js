@@ -4,23 +4,15 @@ import './ReactPlaylister.scss';
 import {
   getCurrentTrack,
   getCurrentSource,
-  getCurrentTrackSource,
   buildPlaylist,
   getTracksQueue,
-  getNextTrack,
   getSourcesQueue,
-  getNextSource,
   setPlayableItems,
   setCurrentItems,
-  validateIndices,
-  usePlaylistFromUrls,
-  useFilledPlaylist,
   getNotSupportedMediaErrors,
   getSkipTrackIndices,
   getSkipSourceIndices
 } from './utils.js';
-
-
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
 
@@ -50,32 +42,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   const [startLoading,setStartLoading] = useState(false);
   const [loading,setLoading] = useState(false);
 
-  //object containing url (as key) - error message (as value)
-  //this way, errors can be shared by sources having the same URL.
-
-  const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls.flat(Infinity)));
-
-  const buildPlaylistFn = useCallback((urls) => {
-    let playlist = buildPlaylist(urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
-    playlist = setPlayableItems(playlist,mediaErrors,props.filterPlayableTrack);
-    return playlist;
-  },[
-    props.sortedProviders,
-    props.disabledProviders,
-    props.ignoreUnsupportedUrls,
-    props.ignoreDisabledUrls,
-    props.ignoreEmptyUrls,
-    mediaErrors,
-    props.filterPlayableTrack
-  ]);
-
-  const [initialPlaylist,setInitialPlaylistFromUrls] = usePlaylistFromUrls(buildPlaylistFn,props.urls);
-
-  console.log("!!!INITIALPLAYLIST",initialPlaylist);
-
   const [indices, setIndices] = useState(props.index);
 
-  const [playlist,setPlaylist] = useState(initialPlaylist);
+  //object containing url (as key) - error message (as value)
+  //this way, errors can be shared by sources having the same URL.
+  const [mediaErrors, setMediaErrors] = useState();
+
+  const [playlist,setPlaylist] = useState();
 
   const [currentTrack, setCurrentTrack] = useState();
   const [currentSource, setCurrentSource] = useState();
@@ -90,17 +63,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     playing:false,
     loading:false,
   });
-
-
-  useEffect(()=>{
-    const updatedPlaylist = setCurrentItems(playlist,indices);
-    setPlaylist(updatedPlaylist);
-  },[indices])
-
-  useEffect(()=>{
-    setCurrentTrack(getCurrentTrack(playlist));
-    setCurrentSource(getCurrentSource(playlist));
-  },[playlist])
 
   const skipTrack = useCallback((goReverse) => {
 
@@ -147,16 +109,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   },[reverse,currentTrack,currentSource])
 
-  const clearStartSourceTimeout = () => {
-    if (!sourceStartTimeout.current) return;
-
-    var now = new Date();
-    var time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
-    console.log("REACTPLAYLISTER / CLEARED START TIMEOUT AT "+time);
-    clearTimeout(sourceStartTimeout.current);
-    sourceStartTimeout.current = undefined;
-  }
-
   //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
   //without having an error fired.
   //So let's hack this with a timeout.
@@ -179,6 +131,29 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     }, sourceNotStartingTimeOutMs);
     sourceStartTimeout.current = timer;
 
+  }
+
+  const clearStartSourceTimeout = () => {
+    if (!sourceStartTimeout.current) return;
+
+    var now = new Date();
+    var time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+    console.log("REACTPLAYLISTER / CLEARED START TIMEOUT AT "+time);
+    clearTimeout(sourceStartTimeout.current);
+    sourceStartTimeout.current = undefined;
+  }
+
+  const setSourceError = (source,error) => {
+
+    console.log("REACTPLAYLISTER / POPULATE TRACK #"+source.trackIndex+" SOURCE #"+source.index+" ERROR",error);
+
+    //urls collection
+    const newMediaErrors = {
+      ...mediaErrors,
+      [source.url]:error
+    }
+
+    setMediaErrors(newMediaErrors);
   }
 
   const handleSourceReady = (player) => {
@@ -209,19 +184,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
     setMediaStarted(true);
 
-  }
-
-  const setSourceError = (source,error) => {
-
-    console.log("REACTPLAYLISTER / POPULATE TRACK #"+source.trackIndex+" SOURCE #"+source.index+" ERROR",error);
-
-    //urls collection
-    const newMediaErrors = {
-      ...mediaErrors,
-      [source.url]:error
-    }
-
-    setMediaErrors(newMediaErrors);
   }
 
   const handleSourceError = (e) => {
@@ -365,15 +327,49 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   },[mediaErrors])
 
   useEffect(()=>{
-    console.log("PLAYLIST UPDATED",playlist);
+    console.log("!!!PLAYLIST UPDATED",playlist);
   },[playlist])
+
+  //initialize playlist when URLs changes
+  useEffect(()=>{
+    const urlErrors = getNotSupportedMediaErrors(props.urls.flat(Infinity));
+    setMediaErrors({...mediaErrors,...urlErrors})
+
+    const playlist = buildPlaylist(props.urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
+    setPlaylist(playlist);
+  },[props.urls])
 
   //set indices playlist at init & when prop changes
   useEffect(()=>{
-    setIndices(props.index);
+    if (props.index !== undefined){
+      setIndices(props.index);
+    }
   },[props.index])
-  //reset
 
+  //when media errors or indices are updated,
+  //do update playlist.
+  useEffect(()=>{
+    setPlaylist(prevState => {
+      let updated = prevState;
+
+      if (mediaErrors !== undefined){
+        updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack);
+      }
+      if (indices !== undefined){
+        updated = setCurrentItems(updated,indices);
+      }
+      return updated;
+    })
+
+  },[mediaErrors,indices])
+
+  //when playlist has been updated, populate current track & source.
+  useEffect(()=>{
+    setCurrentTrack(getCurrentTrack(playlist));
+    setCurrentSource(getCurrentSource(playlist));
+  },[playlist])
+
+  //reset
   useEffect(()=>{
     clearStartSourceTimeout();
     setSkipping(false);

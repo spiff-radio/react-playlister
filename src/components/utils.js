@@ -1,4 +1,3 @@
-import { useState, useCallback,useEffect  } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
@@ -159,18 +158,6 @@ export function getNotSupportedMediaErrors(urls){
   return errors;
 }
 
-function getUnsupportedUrls(playlist){
-
-  const getUnsupportedSources = playlist => {
-    const allSources = playlist.map(track => track.sources).flat(Infinity);
-    return allSources.filter(source => !source.supported);
-  }
-
-  const sources = getUnsupportedSources(playlist);
-  return sources.map(source=>source.url)
-}
-
-
 function getProvidersOrder(keys){
   if (!keys) return;
   const frontKeys = keys.filter(x => REACTPLAYER_PROVIDER_KEYS.includes(x));//the keys we want to put in front (remove the ones that does not exists in the original array)
@@ -267,7 +254,7 @@ export function getTracksQueue(playlist,track,skipping,loop,reverse){
   return queue;
 }
 
-export function getNextTrack(playlist,track,skipping,loop,reverse){
+function getNextTrack(playlist,track,skipping,loop,reverse){
   let queue = getTracksQueue(playlist,track,skipping,loop,reverse);
   return queue[0];
 }
@@ -283,9 +270,35 @@ export function getSourcesQueue(track,source,skipping,loop,reverse){
   return queue;
 }
 
-export function getNextSource(track,source,skipping,loop,reverse){
+function getNextSource(track,source,skipping,loop,reverse){
   const queue = getSourcesQueue(track,source,skipping,loop,reverse);
   return queue[0];
+}
+
+//Get new indices based on the old track to skip
+export function getSkipTrackIndices(playlist,oldTrack,loop,reverse){
+
+  if (!playlist) throw new Error("getSkipTrackIndices() requires playlist to be defined.");
+
+  const track = getNextTrack(playlist,oldTrack,true,loop,reverse);
+  const trackIndex = track ? track.index : undefined;
+  if (!track) return;
+
+  let newSource = getCurrentTrackSource(track);//get current source if any
+
+  if (!newSource){
+    newSource = getNextSource(track,undefined,true);//get first available source
+  }
+
+  const newSourceIndex = newSource ? newSource.index : undefined;
+
+  return [trackIndex,newSourceIndex];
+}
+
+export function getSkipSourceIndices(track,oldSource,reverse){
+  if (!track) throw new Error("getSkipSourceIndices() requires 'track' to be defined.");
+  const source = getNextSource(track,oldSource,true,true,reverse);
+  return [track.index,source?.index];
 }
 
 export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAutoPlayableFn){
@@ -298,7 +311,7 @@ export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAut
   let trackCount = 0;
   let playableTrackCount = 0;
 
-  playlist = playlist.map((trackItem) => {
+  let newPlaylist = playlist.map((trackItem) => {
 
     const getUpdatedSources = (track) => {
       return track.sources.map(
@@ -352,35 +365,15 @@ export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAut
 
     return trackItem;
   });
+
+  //make sure the playlist has been updated.
+  //If not, return current playlist so reference is not updated.
+  const playlistUpdated = (JSON.stringify(newPlaylist) !== JSON.stringify(playlist));
+  if (!playlistUpdated) return playlist;
+
   DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE': "+playableSourceCount+"/"+sourceCount+" SOURCES, "+playableTrackCount+"/"+trackCount+" TRACKS");
 
-  return playlist;
-}
-
-//Get new indices based on the old track to skip
-export function getSkipTrackIndices(playlist,oldTrack,loop,reverse){
-
-  if (!playlist) throw new Error("getSkipTrackIndices() requires playlist to be defined.");
-
-  const track = getNextTrack(playlist,oldTrack,true,loop,reverse);
-  const trackIndex = track ? track.index : undefined;
-  if (!track) return;
-
-  let newSource = getCurrentTrackSource(track);//get current source if any
-
-  if (!newSource){
-    newSource = getNextSource(track,undefined,true);//get first available source
-  }
-
-  const newSourceIndex = newSource ? newSource.index : undefined;
-
-  return [trackIndex,newSourceIndex];
-}
-
-export function getSkipSourceIndices(track,oldSource,reverse){
-  if (!track) throw new Error("getSkipSourceIndices() requires 'track' to be defined.");
-  const source = getNextSource(track,oldSource,true,true,reverse);
-  return [track.index,source?.index];
+  return newPlaylist;
 }
 
 //Set which are the current track/source.
@@ -393,11 +386,12 @@ export function setCurrentItems(playlist,indices){
   indices = validateIndices(indices,playlist);
   if (indices === undefined) throw new Error("setCurrentItems() requires 'indices' to be defined.");
 
+  let newPlaylist = undefined;
   const trackIndex = indices[0];
   const sourceIndex = indices[1];
 
   if (trackIndex !== undefined){
-    playlist = playlist.map((trackItem) => {
+    newPlaylist = playlist.map((trackItem) => {
 
       const isCurrentTrack = (trackItem.index === trackIndex);
 
@@ -423,9 +417,14 @@ export function setCurrentItems(playlist,indices){
     });
   }
 
+  //make sure the playlist has been updated.
+  //If not, return current playlist so reference is not updated.
+  const playlistUpdated = (JSON.stringify(newPlaylist) !== JSON.stringify(playlist));
+  if (!playlistUpdated) return playlist;
+
   DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
 
-  return playlist;
+  return newPlaylist;
 
 }
 
@@ -459,7 +458,7 @@ export function getDefaultIndices(playlist,trackIndex){
 }
 
 //format indices the right way + ensure that they exists in the playlist
-export function validateIndices(input,playlist){
+function validateIndices(input,playlist){
 
   if (!playlist) throw new Error("validateIndices() requires 'playlist' to be defined.");
 
@@ -502,23 +501,4 @@ export function validateIndices(input,playlist){
 
   return newIndices;
 
-}
-
-//https://stackoverflow.com/a/70862465/782013
-export function usePlaylistFromUrls(createFn, urls) {
-  const [playlist, setPlaylist] = useState(createFn(urls));
-
-  // Like set state, but also generates playlist
-  const setOutputPlaylist = useCallback(
-    (urls) => setPlaylist(createFn(urls)),
-    [createFn, setPlaylist],
-  );
-
-  // Update state if arguments change
-  useEffect(
-    () => setOutputPlaylist(urls),
-    [setOutputPlaylist, urls],
-  );
-
-  return [playlist, setOutputPlaylist];
 }
