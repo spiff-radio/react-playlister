@@ -1,22 +1,18 @@
 import React from "react";
+import { getCurrentTrack,getCurrentSource } from "./utils.js";
 
 export const AppControls = props => {
 
   const playlist = props.playlist;
   const controls = props.controls;
+  const indices = props.indices;
   const playlisterRef = props.playlister;
 
-  //get current track & source
-  const track = playlist?.find(function(track) {
-    return track.current;
-  });
+  const currentTrack = getCurrentTrack(playlist);
+  const currentSource = getCurrentSource(playlist);
 
-  const source = track?.sources.find(function(source) {
-    return source.current;
-  });
-
-  const trackIndex = track?.index;
-  const sourceIndex = source?.index;
+  const trackIndex = currentTrack?.index;
+  const sourceIndex = currentSource?.index;
 
   const hasPreviousTrack = controls?.has_previous_track;
   const hasNextTrack = controls?.has_next_track;
@@ -38,12 +34,6 @@ export const AppControls = props => {
   const handleShuffle = (bool) => {
     if (typeof props.onToggleShuffle === 'function') {
       props.onToggleShuffle(bool);
-    }
-  }
-
-  const handleAutoskip = (bool) => {
-    if (typeof props.onToggleAutoskip === 'function') {
-      props.onToggleAutoskip(bool);
     }
   }
 
@@ -87,7 +77,7 @@ export const AppControls = props => {
           <p>
             <strong>playing</strong>
             {
-              (controls.playLoading || controls.mediaLoading) ?
+              controls.loading ?
               <span>...</span>
               :
               <span>{controls.playing ? 'true' : 'false'}</span>
@@ -113,14 +103,6 @@ export const AppControls = props => {
             <button
             onClick={(e) => handleShuffle(!props.shuffle)}
             >toggle</button>
-          </p>
-
-          <p>
-            <strong>autoskip</strong>
-            <span>{props.autoskip ? 'true' : 'false'}</span>&nbsp;
-            <button
-            onClick={(e) => handleAutoskip(!props.autoskip)}
-            >toggle</button><br/>
           </p>
 
           <p>

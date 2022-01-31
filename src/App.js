@@ -20,6 +20,7 @@ function App() {
       'https://soundcloud.com/this-one-will/fire-an-error-when-loaded'
     ],
     [],
+    ['https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen'],
     [
       'https://soundcloud.com/santigold/who-be-lovin-me-feat-ilovemakonnen',
       'https://www.youtube.com/watch?v=i0PD1nVz0kA',
@@ -34,25 +35,23 @@ function App() {
 
   ]);
 
-  const [index,setIndex] = useState([3,1]);
+  const [indices,setIndices] = useState(0);
+  const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
 
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [playRequest, setPlayRequest] = useState(false);
-  const [autoskip, setAutoskip] = useState(true);
-
-  //sync the playRequest state with the media playing state:
-  //(eg. because we've used the Youtube controls to play the media instead of our play button)
-  useEffect(() => {
-    if (!playlisterControls) return;
-    setPlayRequest(playlisterControls.playing);
-  }, [playlisterControls]);
 
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
     setPlaylisterPlaylist(playlist);
+  }
+
+  const handleIndicesUpdated = (indices) => {
+    console.log("APP / INDICES UPDATED",indices);
+    setPlaylisterIndices(indices);
   }
 
   const handleControlsUpdated = (controls) => {
@@ -61,12 +60,12 @@ function App() {
   }
 
   const handlePlaylistEnded = () => {
+    setPlayRequest(false);
     console.log("PLAYLIST ENDED");
   }
 
-  const handleSourceSelect = (index) => {
-    console.log("APP / SOURCE SELECT",index);
-    setIndex(index);
+  const handleSourceSelect = (indices) => {
+    setIndices(indices);
   }
 
   const handleUpdateUrls = (e) => {
@@ -75,9 +74,6 @@ function App() {
     arr = arr.filter(item => item);//remove empty values
     setUrls(arr);
   }
-
-
-  console.log("APP RELOAD");
 
   return (
     <div className="App">
@@ -118,11 +114,9 @@ function App() {
       controls={playlisterControls}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       onTogglePlay={(bool) => setPlayRequest(bool)}
       onToggleLoop={(bool) => setLoop(bool)}
       onToggleShuffle={(bool) => setShuffle(bool)}
-      onToggleAutoskip={(bool) => setAutoskip(bool)}
       />
       <ReactPlaylister
       ref={playlisterRef}
@@ -138,12 +132,11 @@ function App() {
       //force select an item.
       //if your input is single-level; set the source index
       //if your input is two-levels; either the track index OR the [track index, source index]
-      index={index}
+      index={indices}
       loop={loop}
       shuffle={shuffle}
-      autoskip={autoskip}
       disabledProviders={['soundcloud']}
-      //sortProviders={['file']}
+      //sortedProviders={['file']}
       ignoreUnsupportedUrls={false}
       ignoreDisabledUrls={false}
       ignoreEmptyUrls={false}
@@ -177,6 +170,7 @@ function App() {
       /*
       Callback props
       */
+      onIndicesUpdated={handleIndicesUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistUpdated={handlePlaylistUpdated}
       onPlaylistEnded={handlePlaylistEnded}

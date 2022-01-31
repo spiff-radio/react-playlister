@@ -12,9 +12,8 @@ Prop | Description | Default
 `index` | Load a specific item when component is initialized.<br/>&nbsp; ◦ &nbsp;Track: index of the selected track (starting at 0), eg. `1` (or `[1]`)<br/>&nbsp; ◦ &nbsp;Source: array of track index + source index (starting at 0) eg. `[0,2]` | `undefined`
 `loop` | Set to `true` or `false` to loop the playlist. | `false`
 `shuffle` | Set to `true` or `false` to enable shuffle mode. **(not yet implemented)** | `false`
-`autoskip` | Ignore unplayable/disabled items when traversing the playlist and skip to the next track when media ends.  | `true`
 `disabledProviders` | URLs from those providers won't play unless they are specifically requested.  It should be an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `undefined`
-`sortProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
+`sortedProviders` | Sort the URLs based on an array of [providers keys](https://github.com/cookpete/react-player/blob/master/src/players/index.js | `['file']`
 `ignoreUnsupportedUrls` | Remove URLs that are not supported by [React Player](https://github.com/cookpete/react-player) | `true`
 `ignoreDisabledUrls` | Remove URLs that matches a disabled provider | `true`
 `ignoreEmptyUrls` | Remove empty sets of URLs (some URLs be removed because `ignoreUnsupportedUrls` and/or `ignoreDisabledUrls` is set to `true`) | `true`
@@ -45,11 +44,11 @@ Use [`ref`](https://facebook.github.io/react/docs/refs-and-the-dom.html) to call
 
 Method | Description
 ------ | -----------
-`previousTrack()` | Go to the previous track (*playable track* if `autoskip` is set to `true`).
-`nextTrack()` | Go to the next track / (*playable track* if `autoskip` is set to `true`).
-`skipTrack()` | Go to the previous or next track (*playable track* if `autoskip` is set to `true`); depending on the current playing direction.
-`previousSource()` | Go to the previous track source - or previous playable track source if `autoskip` is set to `true`.
-`nextSource()` | Go to the next track source - or next playable track source if `autoskip` is set to `true`.
+`previousTrack()` | Go to the previous playable track.
+`nextTrack()` | Go to the next playable track.
+`skipTrack()` | Go to the previous or next playable track; depending on the current playing direction.
+`previousSource()` | Go to the previous playable track source.
+`nextSource()` | Go to the next playable track source.
 `getReactPlayer()` | Returns the `ReactPlayer` component instance.
 
 #### About *filterPlayableTrack* and *filterSkipUnsourcedTrack* methods
