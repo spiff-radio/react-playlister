@@ -17,7 +17,7 @@ import {
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
 
-export const ReactPlaylister = forwardRef((props, ref) => {
+const ReactPlaylister = forwardRef((props, ref) => {
 
   const loop = props.loop ?? false;
   const shuffle = props.shuffle ?? false;
@@ -687,3 +687,5 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     </div>
   );
 })
+
+export default ReactPlaylister;

@@ -1,11 +1,10 @@
 import React from "react";
-import { getCurrentTrack,getCurrentSource } from "./utils.js";
+import { getCurrentTrack,getCurrentSource } from "./ReactPlaylister/utils.js";
 
 export const AppControls = props => {
 
   const playlist = props.playlist;
   const controls = props.controls;
-  const indices = props.indices;
   const playlisterRef = props.playlister;
 
   const currentTrack = getCurrentTrack(playlist);

@@ -5,7 +5,6 @@ import { Label } from 'semantic-ui-react';
 export const AppFeedback = props => {
 
   const playlist = props.playlist;
-  const indices = props.indices;
 
   const SourceFeedback = props => {
 
@@ -50,7 +49,6 @@ export const AppFeedback = props => {
   const TrackFeedback = props => {
 
     let content;
-    const currentSourceIndex = props.sourceIndex;
 
     const handleTrackSelect = (e) => {
       if (typeof props.onSelect === 'function') {

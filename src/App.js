@@ -1,8 +1,8 @@
 import logo from './logo.svg';
 import './App.scss';
 import 'semantic-ui-css/semantic.min.css';
-import React, { useState, useEffect,useRef } from "react";
-import { ReactPlaylister } from "./components/ReactPlaylister";
+import React, { useState,useRef } from "react";
+import { ReactPlaylister } from "./components/ReactPlaylister/index.js";
 import { AppFeedback } from "./components/AppFeedback";
 import { AppControls } from "./components/AppControls";
 
@@ -36,7 +36,6 @@ function App() {
   ]);
 
   const [indices,setIndices] = useState(0);
-  const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
 
@@ -47,11 +46,6 @@ function App() {
   const handlePlaylistUpdated = (playlist) => {
     console.log("APP / PLAYLIST UPDATED",playlist);
     setPlaylisterPlaylist(playlist);
-  }
-
-  const handleIndicesUpdated = (indices) => {
-    console.log("APP / INDICES UPDATED",indices);
-    setPlaylisterIndices(indices);
   }
 
   const handleControlsUpdated = (controls) => {
@@ -170,7 +164,6 @@ function App() {
       /*
       Callback props
       */
-      onIndicesUpdated={handleIndicesUpdated}
       onControlsUpdated={handleControlsUpdated}
       onPlaylistUpdated={handlePlaylistUpdated}
       onPlaylistEnded={handlePlaylistEnded}
