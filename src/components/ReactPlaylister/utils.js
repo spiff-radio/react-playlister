@@ -306,9 +306,7 @@ export function getSkipSourceIndices(track,oldSource,reverse){
 
 export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAutoPlayableFn){
 
-  if (playlist === undefined) throw new Error("setCurrentItems() requires 'playlist' to be defined.");
-  if (!playlist.length) return playlist;
-  if (mediaErrors === undefined) throw new Error("setPlayableItems() requires mediaErrors to be defined.");
+  if ( (playlist === undefined) || (mediaErrors === undefined) ) return playlist;
 
   let sourceCount = 0;
   let playableSourceCount = 0;
@@ -384,11 +382,8 @@ export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAut
 //We set it directly in the playlist (and we don't just use some indices state) because we want to keep the last selected source as fallback if no source index is defined.
 export function setCurrentItems(playlist,indices){
 
-  if (playlist === undefined) throw new Error("setCurrentItems() requires 'playlist' to be defined.");
-  if (!playlist.length) return playlist;
-
   indices = validateIndices(indices,playlist);
-  if (indices === undefined) throw new Error("setCurrentItems() requires 'indices' to be defined.");
+  if (indices === undefined) return playlist;
 
   let newPlaylist = undefined;
   const trackIndex = indices[0];
@@ -475,7 +470,7 @@ function getDefaultIndices(playlist,trackIndex,sourceIndex){
 //format indices the right way + ensure that they exists in the playlist
 function validateIndices(input,playlist){
 
-  if (!playlist) throw new Error("validateIndices() requires 'playlist' to be defined.");
+  if (playlist === undefined) return input;
 
   const indices = Array.isArray(input) ? input : [input];//force array
   let newIndices = [...indices];
