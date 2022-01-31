@@ -11,8 +11,7 @@ import {
   setCurrentItems,
   getNotSupportedMediaErrors,
   getSkipTrackIndices,
-  getSkipSourceIndices,
-  usePlaylistFromUrls
+  getSkipSourceIndices
 } from './utils.js';
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
@@ -47,7 +46,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
   //object containing url (as key) - error message (as value)
   //this way, errors can be shared by sources having the same URL.
-  const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls.flat(Infinity)));
+  const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls?.flat(Infinity)));
 
   const buildPlaylistFn = useCallback((urls) => {
     return buildPlaylist(urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
@@ -346,7 +345,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
   //update playlist & media errors when URLs do change
   useEffect(()=>{
-    const urlMediaErrors = getNotSupportedMediaErrors(props.urls.flat(Infinity));
+    const urlMediaErrors = getNotSupportedMediaErrors(props.urls?.flat(Infinity));
     setPlaylist(buildPlaylistFn(props.urls));
     setMediaErrors({...mediaErrors,...urlMediaErrors});
   },[props.urls])
@@ -354,6 +353,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
   //when URLS, media errors or indices are updated,
   //do update playlist.
   useEffect(()=>{
+    if (playlist === undefined) return;
     setPlaylist(prevState => {
       let updated = prevState;
       updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack);
@@ -550,9 +550,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
 
     if (!playlist) return;
-
     if (!currentTrack) return;
-
     if ( !currentSource && currentTrack.sources.length ) return; //this track HAS sources so a source index should be passed to update controls.  If the track has NO sources (thus a source index cannot be set) do continue
 
     let appendControls = {};

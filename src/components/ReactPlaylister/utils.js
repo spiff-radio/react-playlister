@@ -1,4 +1,3 @@
-import React, { useState, useCallback,useEffect } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
@@ -33,6 +32,8 @@ Build Playlist
 */
 //build a clean playlist based on an array of URLs
 export function buildPlaylist(trackUrls,sortedProviders,disabledProviders,ignoreUnsupportedUrls,ignoreDisabledUrls,ignoreEmptyUrls){
+
+  if (trackUrls === undefined) return;
 
   trackUrls = [].concat(trackUrls || []);//force array
 
@@ -151,6 +152,7 @@ export function buildPlaylist(trackUrls,sortedProviders,disabledProviders,ignore
 
 //build media errors based on URLs not supported
 export function getNotSupportedMediaErrors(urls){
+  if (urls === undefined) return;
   let errors = {};
   const unSupportedUrls = urls.filter(url=>!ReactPlayer.canPlay(url))
   unSupportedUrls.forEach(function(url){
@@ -304,6 +306,7 @@ export function getSkipSourceIndices(track,oldSource,reverse){
 
 export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAutoPlayableFn){
 
+  if (playlist === undefined) throw new Error("setCurrentItems() requires 'playlist' to be defined.");
   if (!playlist.length) return playlist;
   if (mediaErrors === undefined) throw new Error("setPlayableItems() requires mediaErrors to be defined.");
 
@@ -511,22 +514,4 @@ function validateIndices(input,playlist){
 
   return newIndices;
 
-}
-
-export function usePlaylistFromUrls(buildFn, urls) {
-  const [playlist, setPlaylist] = useState(buildFn(urls));
-
-  // Like setPlaylist, but also sanitizes
-  const setBuiltPlaylist = useCallback(
-    (urls) => setPlaylist(buildFn(urls)),
-    [buildFn, setPlaylist],
-  );
-
-  // Update state if arguments change
-  useEffect(
-    () => setBuiltPlaylist(urls),
-    [setBuiltPlaylist, urls],
-  );
-
-  return [playlist, setBuiltPlaylist];
 }
