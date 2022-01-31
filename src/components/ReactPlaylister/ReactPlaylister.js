@@ -356,7 +356,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
     if (playlist === undefined) return;
     setPlaylist(prevState => {
       let updated = prevState;
-      updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack);
+      updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack,props.filterAutoplayableTrack);
       updated = setCurrentItems(updated,indices);
       return updated;
     })
@@ -460,15 +460,15 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     let doSkip = false;
 
-    const playableSources = currentTrack?.sources.filter(track => {
-      return !skipping ? track.playable : track.autoplayable;
+    const playableSources = currentTrack?.sources.filter(source => {
+      return !skipping ? source.playable : source.autoplayable;
     });
 
-    const canPlay = !skipping ? currentTrack.playable : currentTrack.autoplayable;
+    const canPlayTrack = !skipping ? currentTrack.playable : currentTrack.autoplayable;
 
     const debugPlayString = skipping ? 'AUTOPLAYABLE' : "PLAYABLE";
 
-    if (!canPlay){
+    if (!canPlayTrack){
       DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS NOT "+debugPlayString);
       doSkip = true;
     }else if (!playableSources){
