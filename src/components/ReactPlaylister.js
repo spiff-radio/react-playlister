@@ -125,12 +125,12 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     const msSkipTime = Date.now() + mediaTimeOutMs;
     const skipTime = new Date(msSkipTime);
     const humanSkipTime = skipTime.getHours() + ":" + skipTime.getMinutes() + ":" + skipTime.getSeconds();
-    console.log("REACTPLAYLISTER / INITIALIZE A TIMEOUT FOR MEDIA:"+url+" : IF IT HAS NOT STARTED AT "+humanSkipTime+", IT WILL BE SKIPPED.");
+    console.log("REACTPLAYLISTER / INITIALIZE A TIMEOUT FOR MEDIA: IF IT HAS NOT STARTED AT "+humanSkipTime+", IT WILL BE SKIPPED.",url);
 
     const timer = setTimeout(() => {
       const time = new Date();
       const humanTime = time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds();
-      console.log("REACTPLAYLISTER / TIMEOUT ENDED FOR MEDIA:"+url+", IT HAS NOT STARTED PLAYING.  IT IS NOW "+humanTime+", SKIP CURRENT SOURCE!");
+      console.log("REACTPLAYLISTER / TIMEOUT ENDED FOR MEDIA: IT HAS NOT STARTED PLAYING.  IT IS NOW "+humanTime+", SKIP CURRENT SOURCE!",url);
       setSingleMediaError(url,'Media failed to play after '+mediaTimeOutMs+' ms');
       skipSource();
     }, mediaTimeOutMs);
@@ -422,14 +422,6 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   //update 'loading' property of the controls
   useEffect(() => {
 
-    console.log("!!!LOADERS",loading,{
-      skipping:skipping,
-      sourceLoading:sourceLoading,
-      startLoading:startLoading,
-      mediaRequested:mediaRequested
-    })
-
-
     if (currentSource){
       if (loading){
         DEBUG &&console.log("STARTED LOADING TRACK#"+currentSource.trackIndex+" SOURCE#"+currentSource.index);
@@ -449,7 +441,7 @@ export const ReactPlaylister = forwardRef((props, ref) => {
   ////States feedback
 
   useEffect(()=>{
-    DEBUG && console.log("***REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
+    DEBUG && console.log("REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
   },[playRequest])
 
   useEffect(()=>{
