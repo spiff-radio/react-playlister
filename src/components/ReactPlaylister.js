@@ -11,7 +11,8 @@ import {
   setCurrentItems,
   getNotSupportedMediaErrors,
   getSkipTrackIndices,
-  getSkipSourceIndices
+  getSkipSourceIndices,
+  usePlaylistFromUrls
 } from './utils.js';
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
@@ -46,9 +47,13 @@ export const ReactPlaylister = forwardRef((props, ref) => {
 
   //object containing url (as key) - error message (as value)
   //this way, errors can be shared by sources having the same URL.
-  const [mediaErrors, setMediaErrors] = useState();
+  const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls.flat(Infinity)));
 
-  const [playlist,setPlaylist] = useState();
+  const buildPlaylistFn = useCallback((urls) => {
+    return buildPlaylist(urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
+  },[props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls])
+
+  const [playlist,setPlaylist] = useState(buildPlaylistFn(props.urls));
 
   const [currentTrack, setCurrentTrack] = useState();
   const [currentSource, setCurrentSource] = useState();
@@ -330,43 +335,31 @@ export const ReactPlaylister = forwardRef((props, ref) => {
     console.log("!!!PLAYLIST UPDATED",playlist);
   },[playlist])
 
-  //initialize playlist when URLs changes
+  //update playlist & media errors when URLs do change
   useEffect(()=>{
-    const urlErrors = getNotSupportedMediaErrors(props.urls.flat(Infinity));
-    setMediaErrors({...mediaErrors,...urlErrors})
-
-    const playlist = buildPlaylist(props.urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
-    setPlaylist(playlist);
+    const urlMediaErrors = getNotSupportedMediaErrors(props.urls.flat(Infinity));
+    setPlaylist(buildPlaylistFn(props.urls));
+    setMediaErrors({...mediaErrors,...urlMediaErrors});
   },[props.urls])
 
-  //set indices playlist at init & when prop changes
-  useEffect(()=>{
-    if (props.index !== undefined){
-      setIndices(props.index);
-    }
-  },[props.index])
-
-  //when media errors or indices are updated,
+  //when URLS, media errors or indices are updated,
   //do update playlist.
   useEffect(()=>{
     setPlaylist(prevState => {
       let updated = prevState;
-
-      if (mediaErrors !== undefined){
-        updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack);
-      }
-      if (indices !== undefined){
-        updated = setCurrentItems(updated,indices);
-      }
+      updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack);
+      updated = setCurrentItems(updated,indices);
       return updated;
     })
 
-  },[mediaErrors,indices])
+  },[props.urls,mediaErrors,indices])
 
   //when playlist has been updated, populate current track & source.
   useEffect(()=>{
-    setCurrentTrack(getCurrentTrack(playlist));
-    setCurrentSource(getCurrentSource(playlist));
+    const track = getCurrentTrack(playlist);
+    const source = getCurrentSource(playlist);
+    setCurrentTrack(track);
+    setCurrentSource(source);
   },[playlist])
 
   //reset

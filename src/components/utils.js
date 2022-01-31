@@ -1,3 +1,4 @@
+import React, { useState, useCallback,useEffect } from "react";
 import ReactPlayer from 'react-player';
 import { default as reactplayerProviders } from 'react-player/lib/players/index.js';
 const REACTPLAYER_PROVIDER_KEYS = Object.values(reactplayerProviders).map(provider => {return provider.key});
@@ -428,29 +429,40 @@ export function setCurrentItems(playlist,indices){
 
 }
 
-export function getDefaultIndices(playlist,trackIndex){
+function getDefaultIndices(playlist,trackIndex,sourceIndex){
 
   if (!playlist) throw new Error("getDefaultIndices() requires 'playlist' to be defined.");
 
   let indices;
+  let track;
+  let source;
 
-  //validate track index
-  const track = playlist.find(function(track) {
-    return ( track.index === trackIndex );
-  });
+  //make sure track exists
+  if (trackIndex !== undefined){
+    track = playlist.find(function(track) {
+      return ( track.index === trackIndex );
+    });
+  }
   trackIndex = track ? track.index : undefined;
 
-  //fallbacks
-  if (trackIndex === undefined){
+  //make sure source exists
+  if ( track && (sourceIndex !== undefined) ){
+    source = track.sources.find(function(source) {
+      return ( source.index === trackIndex );
+    });
+  }
+  sourceIndex = source ? source.index : undefined;
+
+  if (trackIndex === undefined){//indices are undefined
     indices = getSkipTrackIndices(playlist);
-    DEBUG && console.log("INDICES ARE UNDEFINED, SET INDICES TO",indices);
-  }else if(track){
+    DEBUG && console.log("INDICES ARE UNDEFINED; SET INDICES TO",indices);
+  }else if ( sourceIndex === undefined ){//source indice is undefined
     indices = getSkipSourceIndices(track);
-
-    if (indices[1]){
-        DEBUG && console.log("SOURCE INDEX IS UNDEFINED, SET INDICES TO",indices);
+    if (indices[1] !== undefined){
+    }else{//no source was found; there is nothing playable here; but still, the user did specify this track.
+      source = getNextSource(track);
+      indices[1] = source?.index;
     }
-
   }
 
   return indices;
@@ -489,10 +501,8 @@ function validateIndices(input,playlist){
   trackIndex = track ? track.index : undefined;
   sourceIndex = source ? source.index : undefined;
 
-  if ( (trackIndex !== undefined) && (sourceIndex !== undefined) ){
-    newIndices = [trackIndex,sourceIndex];
-  }else{
-    newIndices = getDefaultIndices(playlist,trackIndex);
+  if ( ( trackIndex === undefined ) || ( sourceIndex === undefined ) ){
+    newIndices = getDefaultIndices(playlist,trackIndex,sourceIndex);
   }
 
   if ( JSON.stringify(newIndices) !== JSON.stringify(input) ){
@@ -501,4 +511,22 @@ function validateIndices(input,playlist){
 
   return newIndices;
 
+}
+
+export function usePlaylistFromUrls(buildFn, urls) {
+  const [playlist, setPlaylist] = useState(buildFn(urls));
+
+  // Like setPlaylist, but also sanitizes
+  const setBuiltPlaylist = useCallback(
+    (urls) => setPlaylist(buildFn(urls)),
+    [buildFn, setPlaylist],
+  );
+
+  // Update state if arguments change
+  useEffect(
+    () => setBuiltPlaylist(urls),
+    [setBuiltPlaylist, urls],
+  );
+
+  return [playlist, setBuiltPlaylist];
 }
