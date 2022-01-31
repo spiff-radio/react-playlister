@@ -35,7 +35,7 @@ function App() {
 
   ]);
 
-  const [index,setIndex] = useState([1,2]);
+  const [indices,setIndices] = useState(0);
   const [playlisterIndices, setPlaylisterIndices] = useState();
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
@@ -60,12 +60,12 @@ function App() {
   }
 
   const handlePlaylistEnded = () => {
+    setPlayRequest(false);
     console.log("PLAYLIST ENDED");
   }
 
-  const handleSourceSelect = (index) => {
-    console.log("APP / SOURCE SELECT",index);
-    setIndex(index);
+  const handleSourceSelect = (indices) => {
+    setIndices(indices);
   }
 
   const handleUpdateUrls = (e) => {
@@ -132,7 +132,7 @@ function App() {
       //force select an item.
       //if your input is single-level; set the source index
       //if your input is two-levels; either the track index OR the [track index, source index]
-      index={index}
+      index={indices}
       loop={loop}
       shuffle={shuffle}
       disabledProviders={['soundcloud']}
