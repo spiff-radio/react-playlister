@@ -489,7 +489,6 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
       //bugfix : this URL is already loaded; consider skipping is done.
       if (url === mediaUrl){
-        rewindMedia();
         setSkipping(false);
       }else{
         setMediaUrl(url);
@@ -581,6 +580,9 @@ const ReactPlaylister = forwardRef((props, ref) => {
         },
         getReactPlayer(){
           return reactPlayerRef.current;
+        },
+        rewindMedia(){
+          rewindMedia();
         }
        }),
    )
