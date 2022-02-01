@@ -11,7 +11,7 @@ import {
   setCurrentItems,
   getNotSupportedMediaErrors,
   getSkipTrackIndices,
-  getSkipSourceIndices
+  getSkipSourceIndices,
 } from './utils.js';
 
 const DEBUG = (process.env.NODE_ENV !== 'production');
@@ -31,15 +31,11 @@ const ReactPlaylister = forwardRef((props, ref) => {
   const [reverse,setReverse] = useState(false);
   const [playRequest,setPlayRequest] = useState(false);
 
-  const [mediaLoaded,setMediaLoaded] = useState(false);
-  const [mediaStarted,setMediaStarted] = useState(false);
-  const [mediaRequested,setMediaRequested] = useState(false);
+  const [mediaBuffering,setMediaBuffering] = useState(false);
 
   //loaders
   const [skipping,setSkipping] = useState(false);
-  const [sourceLoading,setSourceLoading] = useState(false);
 
-  const [startLoading,setStartLoading] = useState(false);
   const [loading,setLoading] = useState(false);
 
   const [indices, setIndices] = useState(props.index);
@@ -68,7 +64,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
     loading:false,
   });
 
-  const skipTrack = useCallback((goReverse) => {
+  const skipCurrentTrack = useCallback((goReverse) => {
 
     setSkipping(true);
 
@@ -90,7 +86,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
   },[currentTrack,reverse,playlist,loop])
 
-  const skipSource = useCallback((goReverse) => {
+  const skipCurrentSource = useCallback((goReverse) => {
 
     setSkipping(true);
 
@@ -102,8 +98,20 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     const skipIndices = getSkipSourceIndices(currentTrack,currentSource,goReverse);
 
-    if (indices === undefined){//no source found, skip track
-      skipTrack(goReverse);
+    if (skipIndices === undefined){//no sources found, skip track
+
+      let doSkip = true;
+
+      //before skipping this track, make sure parent components allow it:
+      //we might wait for a playlist update; eg. get track sources
+      if (typeof props.filterSkipUnsourcedTrack === 'function') {
+        doSkip = props.filterSkipUnsourcedTrack(doSkip,currentTrack);
+      }
+
+      if (doSkip){
+        skipCurrentTrack(goReverse);
+      }
+
       return;
     }
 
@@ -116,11 +124,15 @@ const ReactPlaylister = forwardRef((props, ref) => {
   //Players DO fire a 'ready' event even if the media is unavailable (geoblocking,wrong URL...)
   //without having an error fired.
   //So let's hack this with a timeout.
-  const setMediaTimeout = url => {
+  const setMediaPlayTimeout = url => {
 
     if (!url) throw new Error("Missing media URL.");
-    if (mediaTimeOut.current) return;//a timeout has already been registered and has not been cleared yet; abord.
 
+    //there is already a timeout registered, clear it first
+    //TOUFIX since we will replace the timeout, should it be cleared ?
+    if (mediaTimeOut.current){
+      clearTimeout(mediaTimeOut.current);
+    }
     const msSkipTime = Date.now() + mediaTimeOutMs;
     const skipTime = new Date(msSkipTime);
     const humanSkipTime = skipTime.getHours() + ":" + skipTime.getMinutes() + ":" + skipTime.getSeconds();
@@ -130,14 +142,14 @@ const ReactPlaylister = forwardRef((props, ref) => {
       const time = new Date();
       const humanTime = time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds();
       console.log("REACTPLAYLISTER / TIMEOUT ENDED FOR MEDIA: IT HAS NOT STARTED PLAYING.  IT IS NOW "+humanTime+", SKIP CURRENT SOURCE!",url);
-      setSingleMediaError(url,'Media failed to play after '+mediaTimeOutMs+' ms');
-      skipSource();
+      appendMediaError(url,'Media failed to play after '+mediaTimeOutMs+' ms');
+      skipCurrentSource();
     }, mediaTimeOutMs);
     mediaTimeOut.current = timer;
 
   }
 
-  const clearMediaTimeout = () => {
+  const clearMediaPlayTimeout = () => {
     if (!mediaTimeOut.current) return;
 
     var now = new Date();
@@ -147,7 +159,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
     mediaTimeOut.current = undefined;
   }
 
-  const setSingleMediaError = (url,error) => {
+  const appendMediaError = (url,error) => {
 
     console.log("REACTPLAYLISTER / MEDIA "+url+" ERROR",error);
 
@@ -167,9 +179,14 @@ const ReactPlaylister = forwardRef((props, ref) => {
       props.onReady(player);
     }
 
-    DEBUG && console.log("REACTPLAYLISTER / MEDIA READY",mediaUrl);
+    //we can consider that skipping is finished since the media is ready and there is no play request
+    if (!playRequest){
+      setSkipping(false);
+    }else{
+      setMediaPlayTimeout(mediaUrl);
+    }
 
-    setMediaLoaded(true);
+    DEBUG && console.log("REACTPLAYLISTER / MEDIA READY",mediaUrl);
 
   }
 
@@ -182,13 +199,13 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / MEDIA STARTED",mediaUrl);
 
-    setMediaStarted(true);
-
+    clearMediaPlayTimeout();
+    setSkipping(false);
   }
 
   const handleMediaError = (e) => {
 
-    setSingleMediaError(mediaUrl,'Error while playing media');
+    appendMediaError(mediaUrl,'Error while playing media');
 
     //inherit React Player prop
     if (typeof props.onError === 'function') {
@@ -197,7 +214,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     //skip automatically if the player is playing
     if (playRequest){
-      skipSource();
+      skipCurrentSource();
     }
 
   }
@@ -233,7 +250,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
     }
 
     setPlayRequest(true);//align our state
-    setMediaRequested(false);
+    setMediaBuffering(false);
 
     setControls(prevState => {
       return{
@@ -252,8 +269,8 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     //<--TOUFIX TOUCHECK USEFUL ?
     //!skipping : bugfix:  Sometimes, ReactPlayer fire this event after the media is ready.
-    //mediaRequested; when buffering
-    if (!skipping && !mediaRequested){
+
+    if (!skipping){
       setPlayRequest(false);//align our state
     }
 
@@ -294,42 +311,41 @@ const ReactPlaylister = forwardRef((props, ref) => {
       props.onBuffer();
     }
 
-    setMediaRequested(true);
+    setMediaBuffering(true);
 
   }
 
   const handlePlaylistEnded = () => {
     DEBUG && console.log("REACTPLAYLISTER / PLAYLIST ENDED");
-    doReset();
     if(typeof props.onPlaylistEnded === 'function'){
       props.onPlaylistEnded();
     }
   }
 
   const previousTrack = () => {
-    skipTrack(true);
+    skipCurrentTrack(true);
   }
 
   const nextTrack = () => {
-    skipTrack(false);
+    skipCurrentTrack(false);
   }
 
   const previousSource = () => {
-    skipSource(true);
+    skipCurrentSource(true);
   }
 
   const nextSource = () => {
-    skipSource(false);
+    skipCurrentSource(false);
   }
 
-  const doReset = () => {
-    DEBUG && console.log("REACTPLAYLISTER / RESET");
-    setSkipping(false);
-    setSourceLoading(false);
-    setStartLoading(false);
-    setMediaRequested(false);
-    setMediaLoaded(false);
-    setMediaStarted(false);
+  const rewindMedia = () => {
+    //if that source has already played, resets it.
+    const played = reactPlayerRef.current.getCurrentTime();
+
+    if (played){
+      DEBUG && console.log("REACTPLAYLISTER / REWIND MEDIA");
+      reactPlayerRef.current.seekTo(0);
+    }
   }
 
   //update the "playing" state from props
@@ -354,51 +370,24 @@ const ReactPlaylister = forwardRef((props, ref) => {
   //do update playlist.
   useEffect(()=>{
     if (playlist === undefined) return;
+
     setPlaylist(prevState => {
-      let updated = prevState;
+
+      //clone current playlist so we don't mutate the state
+      let updated = prevState.map(e=>{return {...e}});
+
       updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack,props.filterAutoplayableTrack);
       updated = setCurrentItems(updated,indices);
+
+      const track = getCurrentTrack(updated);
+      const source = getCurrentSource(updated);
+      setCurrentTrack(track);
+      setCurrentSource(source);
+
       return updated;
     })
 
   },[props.urls,mediaErrors,indices])
-
-  //when playlist has been updated, populate current track & source.
-  useEffect(()=>{
-    const track = getCurrentTrack(playlist);
-    const source = getCurrentSource(playlist);
-    setCurrentTrack(track);
-    setCurrentSource(source);
-  },[playlist])
-
-  //reset
-  useEffect(()=>{
-    doReset();
-  },[currentTrack,currentSource])
-
-  //Media is loaded and requested - await that it starts !
-  useEffect(()=>{
-    if (mediaLoaded && playRequest){
-      setStartLoading(true);
-    }
-  },[mediaLoaded])
-
-  //Media has started
-  useEffect(()=>{
-    if (mediaStarted){
-      setStartLoading(false);
-    }
-  },[mediaStarted])
-
-  //has the skipping ended ?
-  //either the media is loaded and there is no play request
-  //either the media has started.
-  useEffect(()=>{
-    const stopSkip = ( (mediaLoaded && !playRequest) || mediaStarted );
-    if (stopSkip){
-      setSkipping(false);
-    }
-  },[mediaLoaded,mediaStarted])
 
   //if the skipping has ended, then reset the reverse state.
   useEffect(()=>{
@@ -407,17 +396,18 @@ const ReactPlaylister = forwardRef((props, ref) => {
     }
   },[skipping])
 
-  //sourceLoading - TRUE if the media is not loaded yet while we request it to play.
-  useEffect(()=>{
-    const bool = (playRequest && !mediaLoaded && currentSource?.playable);
-    setSourceLoading(bool);
-  },[playRequest,mediaLoaded])
-
   //set main loader
   useEffect(()=>{
-    const bool = (skipping || sourceLoading || startLoading || mediaRequested);
+    const bool = (skipping || mediaBuffering);
+
+    DEBUG && console.log("!!!REACTPLAYLISTER / SET STATE LOADING",bool,{
+      skipping:skipping,
+      mediaBuffering:mediaBuffering
+    });
+
     setLoading(bool);
-  },[skipping,sourceLoading,startLoading,mediaRequested])
+
+  },[skipping,mediaBuffering])
 
   //update 'loading' property of the controls
   useEffect(() => {
@@ -444,45 +434,29 @@ const ReactPlaylister = forwardRef((props, ref) => {
     DEBUG && console.log("REACTPLAYLISTER / STATE PLAY REQUEST",playRequest);
   },[playRequest])
 
-  useEffect(()=>{
-    DEBUG && console.log("REACTPLAYLISTER / STATE LOADING",loading,{
-      skipping:skipping,
-      sourceLoading:sourceLoading,
-      startLoading:startLoading,
-      mediaRequested:mediaRequested
-    });
-  },[loading])
-
-  //skip to something if some indices are undefined
+  //if playRequest = true, should we skip this item ?
   useEffect(() => {
 
     if (!playRequest) return;
+    if (!currentTrack) return;
 
-    let doSkip = false;
-
-    const playableSources = currentTrack?.sources.filter(source => {
-      return !skipping ? source.playable : source.autoplayable;
-    });
-
-    const canPlayTrack = !skipping ? currentTrack.playable : currentTrack.autoplayable;
-
-    const debugPlayString = skipping ? 'AUTOPLAYABLE' : "PLAYABLE";
-
-    if (!canPlayTrack){
-      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS NOT "+debugPlayString);
-      doSkip = true;
-    }else if (!playableSources){
-      //this track has probably been set to 'playable' using the filterPlayableTrack method.
-      //Now, allow to filter the skip value. See Readme.
-      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS SET AS "+debugPlayString+", BUT HAS NO SOURCES.",currentTrack.index);
-      doSkip = true;
-      if (typeof props.filterSkipUnsourcedTrack === 'function') {
-        doSkip = props.filterSkipUnsourcedTrack(doSkip,currentTrack);
-      }
+    if (!currentTrack.playable){
+      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS NOT PLAYABLE, SKIP IT",currentTrack);
+      skipCurrentTrack();
+      return;
     }
 
-    if (!doSkip) return;
-    skipTrack();
+    if (!currentSource){
+      //this track has been set to 'playable' using the filterPlayableTrack method, but has no sources.
+      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" - NO SOURCE SELECTED BUT TRACK IS SET AS PLAYABLE, AWAIT PLAYLIST REFRESH");
+      return;
+    }
+
+    if (!currentSource.playable){
+      DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentSource.trackIndex+" SOURCE #"+currentSource.index+" IS NOT PLAYABLE, SKIP IT",currentSource);
+      skipCurrentSource();
+      return;
+    }
 
   }, [playRequest,currentTrack,currentSource]);
 
@@ -507,13 +481,20 @@ const ReactPlaylister = forwardRef((props, ref) => {
   }, [currentTrack]);
 
   //set source URL
+
   useEffect(() => {
-
-    if (!currentSource) return;
-    //Set URL from source
-
     if (currentSource && currentSource.playable){
-      setMediaUrl(currentSource.url);
+
+      const url = currentSource.url;
+
+      //bugfix : this URL is already loaded; consider skipping is done.
+      if (url === mediaUrl){
+        rewindMedia();
+        setSkipping(false);
+      }else{
+        setMediaUrl(url);
+      }
+
     }else{
       //we would like to use
       //setMediaUrl();
@@ -521,30 +502,13 @@ const ReactPlaylister = forwardRef((props, ref) => {
       //so just do things using our 'loading' state for now.
       //we should check again for this in a few months.
     }
-
-  }, [currentSource,playRequest]);
+  }, [currentSource]);
 
   useEffect(()=>{
-    if (playRequest){
-      setMediaRequested(true);
+    if (controls.playing){
+      setMediaBuffering(false);
     }
-  },[mediaUrl])
-
-  //set a timeout for the requested media
-  useEffect(()=>{
-    if (mediaRequested){
-      setMediaTimeout(mediaUrl);
-    }else{
-      clearMediaTimeout();
-    }
-  },[mediaRequested])
-
-  //clear START timeout once the media has started.
-  useEffect(()=>{
-    if (mediaStarted){
-      clearMediaTimeout();
-    }
-  },[mediaStarted])
+  },[controls.playing])
 
   //update the previous/next controls
   useEffect(() => {
@@ -607,7 +571,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
           nextTrack();
         },
         skipTrack() {
-          skipTrack();
+          skipCurrentTrack();
         },
         previousSource() {
           previousSource();
@@ -620,19 +584,6 @@ const ReactPlaylister = forwardRef((props, ref) => {
         }
        }),
    )
-
-   /*
-   //TOUFIX TOUCHECK USEFUL ? KEEP IT HERE FOR NOW.
-   const rewindMedia = () => {
-     //if that source has already played, resets it.
-     const played = reactPlayerRef.current.getCurrentTime();
-
-     if (played){
-       DEBUG && console.log("REACTPLAYLISTER / REWIND MEDIA");
-       reactPlayerRef.current.seekTo(0);
-     }
-   }
-   */
 
   return (
     <div className='react-playlister'>

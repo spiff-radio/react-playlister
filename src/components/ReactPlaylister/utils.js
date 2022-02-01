@@ -301,7 +301,8 @@ export function getSkipTrackIndices(playlist,oldTrack,loop,reverse){
 export function getSkipSourceIndices(track,oldSource,reverse){
   if (!track) throw new Error("getSkipSourceIndices() requires 'track' to be defined.");
   const source = getNextSource(track,oldSource,true,true,reverse);
-  return [track.index,source?.index];
+  if (!source) return;
+  return [track.index,source.index];
 }
 
 export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAutoPlayableFn){
@@ -397,7 +398,8 @@ export function setCurrentItems(playlist,indices){
       //for the selected track only
       //update the 'current' property of its sources
 
-      const getUpdatedSources = (track) => {
+      const getUpdatedSources = (track,sourceIndex) => {
+        if (sourceIndex === undefined) return track.sources;
         return track.sources.map(
           (sourceItem) => {
             return {
@@ -411,7 +413,7 @@ export function setCurrentItems(playlist,indices){
       return {
         ...trackItem,
         current:isCurrentTrack,
-        sources:isCurrentTrack ? getUpdatedSources(trackItem) : trackItem.sources
+        sources:isCurrentTrack ? getUpdatedSources(trackItem,sourceIndex) : trackItem.sources
       }
     });
   }
@@ -456,10 +458,9 @@ function getDefaultIndices(playlist,trackIndex,sourceIndex){
     DEBUG && console.log("INDICES ARE UNDEFINED; SET INDICES TO",indices);
   }else if ( sourceIndex === undefined ){//source indice is undefined
     indices = getSkipSourceIndices(track);
-    if (indices[1] !== undefined){
-    }else{//no source was found; there is nothing playable here; but still, the user did specify this track.
+    if (indices === undefined){//no source was found; there is nothing playable here; but still, the user did specify this track.
       source = getNextSource(track);
-      indices[1] = source?.index;
+      indices = [trackIndex,source?.index];
     }
   }
 
@@ -467,13 +468,20 @@ function getDefaultIndices(playlist,trackIndex,sourceIndex){
 
 }
 
+//make sure indices is an array of two items
+function sanitizeIndices(indices){
+  indices = Array.isArray(indices) ? indices : [indices];//force array
+  return indices;
+}
+
 //format indices the right way + ensure that they exists in the playlist
-function validateIndices(input,playlist){
+export function validateIndices(indices,playlist){
 
-  if (playlist === undefined) return input;
+  let newIndices = sanitizeIndices(indices);
 
-  const indices = Array.isArray(input) ? input : [input];//force array
-  let newIndices = [...indices];
+  if (playlist === undefined) return newIndices;
+
+
 
   let trackIndex = newIndices[0];
   let sourceIndex = newIndices[1];
@@ -503,9 +511,11 @@ function validateIndices(input,playlist){
     newIndices = getDefaultIndices(playlist,trackIndex,sourceIndex);
   }
 
-  if ( JSON.stringify(newIndices) !== JSON.stringify(input) ){
-    DEBUG && console.log("REACTPLAYLISTER / INDICES FIXED FROM "+JSON.stringify(input)+" TO "+JSON.stringify(newIndices));
+  if ( JSON.stringify(newIndices) === JSON.stringify(indices) ){
+    return indices;
   }
+
+  DEBUG && console.log("REACTPLAYLISTER / INDICES VALIDATED FROM "+JSON.stringify(indices)+" TO "+JSON.stringify(newIndices));
 
   return newIndices;
 

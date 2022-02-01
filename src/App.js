@@ -35,7 +35,7 @@ function App() {
 
   ]);
 
-  const [indices,setIndices] = useState(0);
+  const [indices,setIndices] = useState(2);
   const [playlisterPlaylist, setPlaylisterPlaylist] = useState();
   const [playlisterControls, setPlaylisterControls] = useState();
 
