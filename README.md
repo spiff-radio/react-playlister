@@ -33,7 +33,7 @@ Prop | Description
 `onPlaylistUpdated` | Called when the playlist data has been updated.
 `onControlsUpdated` | Called when the playlist controls have been updated.
 `filterPlayableTrack` | Allows you to filter the default *playable* property of a track.  See explanations below.
-`filterSkipUnsourcedTrack` | Allows you to filter the *skip* value when a requested track does not have sources.  See explanations below.
+`filterSkipUnplayableTrack` | Allows you to filter the *skip* value when a requested track is going to be skipped.  See explanations below.
 
 You can also set [the callback props for ReactPlayer](https://github.com/cookpete/react-player/blob/master/README.md#callback-props).
 
@@ -51,19 +51,13 @@ Method | Description
 `nextSource()` | Go to the next playable track source.
 `getReactPlayer()` | Returns the `ReactPlayer` component instance.
 
-#### About *filterPlayableTrack* and *filterSkipUnsourcedTrack* methods
+#### About *filterPlayableTrack* and *filterSkipUnplayableTrack* methods
 
-The *filterPlayableTrack* and *filterSkipUnsourcedTrack* methods are useful in a very specific case:
+The *filterPlayableTrack* and *filterSkipUnplayableTrack* methods are useful in a very specific case:
 
-Let's say you have a track without sources (URLs), and that you're able (eg. using an API call) to query its sources **when** that track is selected.
+Let's say you have a track that does not have playable sources (URLs); and that you're able (eg. using an API call) to query some **when** that track is selected.
 
-1/ Enable tracks that have no sources
-
-```js
-ignoreEmptyUrls={false}
-```
-
-2/ Consider that your track *is* playable even if it has no sources yet using the *filterPlayableTrack* method :
+1/ Consider that your track *is* playable even if it has no sources yet using the *filterPlayableTrack* method :
 
 ```js
 const handleFilterPlayableTrack = (playable,track) => {
@@ -74,7 +68,7 @@ const handleFilterPlayableTrack = (playable,track) => {
 filterPlayableTrack={handleFilterPlayableTrack}
 ```
 
-3/ Block skipping using the *filterSkipUnsourcedTrack* method.  You'll then need your own mechanism to update the ReactPlaylister urls prop.
+2/ Block track being skipped using the *filterSkipUnplayableTrack* method.  You'll then need your own mechanism to update the ReactPlaylister urls prop.
 
 ```js
 const handleFilterSkipUnsourcedTrack = (skip,track) => {
@@ -82,5 +76,11 @@ const handleFilterSkipUnsourcedTrack = (skip,track) => {
   return didSourcesQuery ? skip : false;
 }
 
-filterSkipUnsourcedTrack={handleFilterSkipUnsourcedTrack}
+filterSkipUnplayableTrack={handleFilterSkipUnsourcedTrack}
+```
+
+3/ Enable tracks that have no sources
+
+```js
+ignoreEmptyUrls={false}
 ```

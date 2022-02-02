@@ -104,8 +104,8 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
       //before skipping this track, make sure parent components allow it:
       //we might wait for a playlist update; eg. get track sources
-      if (typeof props.filterSkipUnsourcedTrack === 'function') {
-        doSkip = props.filterSkipUnsourcedTrack(doSkip,currentTrack);
+      if (typeof props.filterSkipUnplayableTrack === 'function') {
+        doSkip = props.filterSkipUnplayableTrack(doSkip,currentTrack);
       }
 
       if (doSkip){
