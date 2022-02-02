@@ -5,7 +5,7 @@ import {
   getCurrentTrack,
   getCurrentSource,
   buildPlaylist,
-  getTracksQueue,
+  getAutoplayableTracksQueue,
   getSourcesQueue,
   setPlayableItems,
   setCurrentItems,
@@ -235,7 +235,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
       props.onSourceEnded(currentSource);
     }
 
-    const queue = getTracksQueue(playlist,undefined,true,false,false);
+    const queue = getAutoplayableTracksQueue(playlist,undefined,false,false);
 
     const lastTrack = queue[queue.length - 1];
 
@@ -524,8 +524,8 @@ const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    const previousTracksQueue = getTracksQueue(playlist,currentTrack,true,loop,true);
-    const nextTracksQueue = getTracksQueue(playlist,currentTrack,true,loop,false);
+    const previousTracksQueue = getAutoplayableTracksQueue(playlist,currentTrack,loop,true);
+    const nextTracksQueue = getAutoplayableTracksQueue(playlist,currentTrack,loop,false);
 
     //SOURCE
     const previousSourcesQueue = getSourcesQueue(currentTrack,currentSource,true,false,true);

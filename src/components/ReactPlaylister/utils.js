@@ -26,6 +26,23 @@ export function getCurrentIndices(playlist){
   return [track?.index,source?.index];
 }
 
+function filterPlayableSource(source){
+  return source.playable;
+}
+
+export function filterAutoPlayableSource(source){
+  return (source.playable && !source.disabled);
+}
+
+function filterPlayableTrack(track){
+  return (track.sources.filter(filterPlayableSource).length > 0);
+}
+
+function filterAutoPlayableTrack(track){
+  //return (track.sources.filter(filterAutoPlayableSource).length > 0);
+  return track.autoplayable;
+}
+
 
 /*
 Build Playlist
@@ -221,14 +238,8 @@ function getArrayQueue(array,needle,loop,reverse){
   return queue;
 }
 
-export function getTracksQueue(playlist,track,skipping,loop,reverse){
+function getTracksQueue(playlist,track,loop,reverse){
   let queue = getArrayQueue(playlist,track,loop,reverse);
-
-  if (skipping){
-    queue = queue.filter(track => {
-      return track.autoplayable;
-    });
-  }
 
   /*
   if (shuffle){
@@ -255,20 +266,19 @@ export function getTracksQueue(playlist,track,skipping,loop,reverse){
   */
 
   return queue;
+
 }
 
-function getNextTrack(playlist,track,skipping,loop,reverse){
-  let queue = getTracksQueue(playlist,track,skipping,loop,reverse);
-  return queue[0];
+export function getAutoplayableTracksQueue(playlist,track,loop,reverse){
+  let queue = getTracksQueue(playlist,track,loop,reverse);
+  return queue.filter(filterAutoPlayableTrack);
 }
 
 export function getSourcesQueue(track,source,skipping,loop,reverse){
   let queue = getArrayQueue(track?.sources,source,loop,reverse);
 
   if (skipping){
-    queue = queue.filter(source => {
-      return source.autoplayable;
-    });
+    queue = queue.filter(filterAutoPlayableSource);
   }
   return queue;
 }
@@ -283,7 +293,8 @@ export function getSkipTrackIndices(playlist,oldTrack,loop,reverse){
 
   if (!playlist) throw new Error("getSkipTrackIndices() requires playlist to be defined.");
 
-  const track = getNextTrack(playlist,oldTrack,true,loop,reverse);
+  //get next autoplayable track
+  const track = getAutoplayableTracksQueue(playlist,oldTrack,loop,reverse)[0];
   const trackIndex = track ? track.index : undefined;
   if (!track) return;
 
@@ -338,25 +349,19 @@ export function setPlayableItems(playlist,mediaErrors,filterPlayableFn,filterAut
 
     trackItem.sources = getUpdatedSources(trackItem);
 
-    const playableSources = trackItem.sources.filter(function(source) {
-      return source.playable;
-    });
+    const playableSources = trackItem.sources.filter(filterPlayableSource);
 
-    const autoPlayableSources = trackItem.sources.filter(function(source) {
-      return source.autoplayable;
-    });
+    const autoPlayableSources = trackItem.sources.filter(filterAutoPlayableSource);
 
     //is the track playable ?
     trackItem.playable = (playableSources.length > 0);
-    trackItem.autoplayable = (autoPlayableSources.length > 0);
-
-    //allow to filter the playable value
-    if ( typeof filterPlayableFn === 'function' ) {
+    if ( typeof filterPlayableFn === 'function' ) {//allow to filter the playable value
       trackItem.playable = filterPlayableFn(trackItem.playable,trackItem);
     }
 
-    //allow to filter the autoplayable value
-    if ( typeof filterAutoPlayableFn === 'function' ) {
+    //is the track autoplayable ?
+    trackItem.autoplayable = (autoPlayableSources.length > 0);
+    if ( typeof filterAutoPlayableFn === 'function' ) {//allow to filter the autoplayable value
       trackItem.autoplayable = filterAutoPlayableFn(trackItem.autoplayable,trackItem);
     }
 
