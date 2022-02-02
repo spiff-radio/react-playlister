@@ -183,7 +183,9 @@ const ReactPlaylister = forwardRef((props, ref) => {
     if (!playRequest){
       setSkipping(false);
     }else{
-      setMediaPlayTimeout(mediaUrl);
+      //TOUFIX
+      //disabled for now - see https://github.com/cookpete/react-player/issues/1382
+      //setMediaPlayTimeout(mediaUrl);
     }
 
     DEBUG && console.log("REACTPLAYLISTER / MEDIA READY",mediaUrl);
@@ -199,7 +201,10 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     DEBUG && console.log("REACTPLAYLISTER / MEDIA STARTED",mediaUrl);
 
-    clearMediaPlayTimeout();
+    //TOUFIX
+    //disabled for now - see https://github.com/cookpete/react-player/issues/1382
+    //clearMediaPlayTimeout();
+
     setSkipping(false);
   }
 
