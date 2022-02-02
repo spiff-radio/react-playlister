@@ -488,7 +488,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
   //set source URL
 
   useEffect(() => {
-    if (currentSource && currentSource.playable){
+    if (currentSource?.playable){
 
       const url = currentSource.url;
 
