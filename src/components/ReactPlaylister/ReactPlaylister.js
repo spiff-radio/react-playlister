@@ -1,20 +1,14 @@
 import React, { useState, useCallback,useEffect, useRef, forwardRef, useImperativeHandle  } from "react";
 import ReactPlayer from 'react-player';
+import {DEBUG} from "./Constants";
 import './ReactPlaylister.scss';
+import Playlist from './Playlist.Model';
 import {
-  getCurrentTrack,
-  getCurrentSource,
-  buildPlaylist,
-  getAutoplayableTracksQueue,
-  getSourcesQueue,
-  setPlayableItems,
   setCurrentItems,
   getNotSupportedMediaErrors,
-  getSkipTrackIndices,
-  getSkipSourceIndices,
+  getProvidersOrder,
+  getDisabledProviders
 } from './utils.js';
-
-const DEBUG = (process.env.NODE_ENV !== 'production');
 
 const ReactPlaylister = forwardRef((props, ref) => {
 
@@ -45,7 +39,63 @@ const ReactPlaylister = forwardRef((props, ref) => {
   const [mediaErrors, setMediaErrors] = useState(getNotSupportedMediaErrors(props.urls?.flat(Infinity)));
 
   const buildPlaylistFn = useCallback((urls) => {
-    return buildPlaylist(urls,props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls);
+
+    const sortedProviders = getProvidersOrder(props.sortedProviders);
+    const disabledProviders = getDisabledProviders(props.disabledProviders);
+
+    const sortSourcesByProvider = (a,b) =>{
+
+      if (!sortedProviders) return 0;
+
+      let aProviderKey = sortedProviders.indexOf(a.provider?.key);
+      aProviderKey = (aProviderKey !== -1) ? aProviderKey : sortedProviders.length; //if key not found, consider at the end
+
+      let bProviderKey = sortedProviders.indexOf(b.provider?.key);
+      bProviderKey = (bProviderKey !== -1) ? bProviderKey : sortedProviders.length; //if key not found, consider at the end
+
+      return aProviderKey - bProviderKey;
+
+    }
+
+    const playlist = new Playlist(urls);
+
+    //remove tracks that have no sources
+    if (props.ignoreEmptyUrls){
+      playlist.tracks = playlist.tracks.filter(track => {
+        return (track.sources.length > 0);
+      });
+    }
+
+    playlist.tracks.forEach(function(track){
+
+      track.sources.forEach(function(source){
+        //set disabled sources by providers
+        source.disabled = source.provider ? (disabledProviders || []).includes(source.provider.key) : false
+      })
+
+      //remove unsupported sources
+      if (props.ignoreUnsupportedUrls){
+        track.sources = track.sources.filter(source => {
+          return source.supported;
+        });
+      }
+
+      //remove disabled providers sources
+      if (props.ignoreDisabledUrls){
+        track.sources = track.sources.filter(source => {
+          return !source.disabled;
+        });
+      }
+
+      //sort sources
+      if (sortedProviders){
+        track.sources = track.sources.sort(sortSourcesByProvider);
+      }
+
+    })
+
+    return playlist;
+
   },[props.sortedProviders,props.disabledProviders,props.ignoreUnsupportedUrls,props.ignoreDisabledUrls,props.ignoreEmptyUrls])
 
   const [playlist,setPlaylist] = useState(buildPlaylistFn(props.urls));
@@ -72,7 +122,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
     goReverse = (goReverse !== undefined) ? goReverse : reverse;
     setReverse(goReverse);
 
-    const skipIndices = getSkipTrackIndices(playlist,currentTrack,loop,goReverse);
+    const skipIndices = playlist.getSkipTrackIndices(currentTrack,loop,goReverse);
 
     if (skipIndices === undefined){//no indices found
       handlePlaylistEnded();
@@ -96,7 +146,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     const reverseMsg = goReverse ? ' TO PREVIOUS' : ' TO NEXT';
 
-    const skipIndices = getSkipSourceIndices(currentTrack,currentSource,goReverse);
+    const skipIndices = currentTrack.getSkipSourceIndices(currentSource,goReverse);
 
     if (skipIndices === undefined){//no sources found, skip track
 
@@ -235,7 +285,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
       props.onSourceEnded(currentSource);
     }
 
-    const queue = getAutoplayableTracksQueue(playlist,undefined,false,false);
+    const queue = playlist.getAutoplayableTracksQueue(undefined,false,false);
 
     const lastTrack = queue[queue.length - 1];
 
@@ -379,13 +429,16 @@ const ReactPlaylister = forwardRef((props, ref) => {
     setPlaylist(prevState => {
 
       //clone current playlist so we don't mutate the state
-      let updated = prevState.map(e=>{return {...e}});
+      let updated = Object.assign(
+        new Playlist(),
+        prevState
+      );
 
-      updated = setPlayableItems(updated,mediaErrors,props.filterPlayableTrack,props.filterAutoplayableTrack);
-      updated = setCurrentItems(updated,indices);
+      updated.updatePlayableTracks(mediaErrors,props.filterPlayableTrack,props.filterAutoplayableTrack);
+      updated.setCurrentTrack(indices);
 
-      const track = getCurrentTrack(updated);
-      const source = getCurrentSource(updated);
+      const track = updated.getCurrentTrack();
+      const source = track?.getCurrentSource();
       setCurrentTrack(track);
       setCurrentSource(source);
 
@@ -443,7 +496,10 @@ const ReactPlaylister = forwardRef((props, ref) => {
   useEffect(() => {
 
     if (!playRequest) return;
+
     if (!currentTrack) return;
+
+    console.log("!!!COUCOU YO",playRequest);
 
     if (!currentTrack.playable){
       DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS NOT PLAYABLE, SKIP IT",currentTrack);
@@ -524,12 +580,12 @@ const ReactPlaylister = forwardRef((props, ref) => {
     let appendControls = {};
 
     //TRACK
-    const previousTracksQueue = getAutoplayableTracksQueue(playlist,currentTrack,loop,true);
-    const nextTracksQueue = getAutoplayableTracksQueue(playlist,currentTrack,loop,false);
+    const previousTracksQueue = playlist.getAutoplayableTracksQueue(currentTrack,loop,true);
+    const nextTracksQueue = playlist.getAutoplayableTracksQueue(currentTrack,loop,false);
 
     //SOURCE
-    const previousSourcesQueue = getSourcesQueue(currentTrack,currentSource,true,false,true);
-    const nextSourcesQueue = getSourcesQueue(currentTrack,currentSource,true,false,false);
+    const previousSourcesQueue = currentTrack.getSourcesQueue(currentSource,true,false,true);
+    const nextSourcesQueue = currentTrack.getSourcesQueue(currentSource,true,false,false);
 
     appendControls = {
       ...appendControls,
@@ -552,6 +608,7 @@ const ReactPlaylister = forwardRef((props, ref) => {
   //warn parent that the playlist has been updated
   useEffect(() => {
     if (typeof props.onPlaylistUpdated === 'function') {
+      console.log("!!!PLAYLIST UPDATED",playlist);
       props.onPlaylistUpdated(playlist);
     }
   }, [playlist]);
