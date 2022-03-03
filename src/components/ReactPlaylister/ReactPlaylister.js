@@ -499,8 +499,6 @@ const ReactPlaylister = forwardRef((props, ref) => {
 
     if (!currentTrack) return;
 
-    console.log("!!!COUCOU YO",playRequest);
-
     if (!currentTrack.playable){
       DEBUG && console.log("REACTPLAYLISTER / TRACK #"+currentTrack.index+" IS NOT PLAYABLE, SKIP IT",currentTrack);
       skipCurrentTrack();
