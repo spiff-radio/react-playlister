@@ -11,6 +11,9 @@
 # production
 /build
 
+# ReactPlaylister
+/src/components/ReactPlaylister
+
 # misc
 .DS_Store
 .env.local
