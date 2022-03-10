@@ -43,7 +43,7 @@ export default class Playlist{
 
   getCurrentIndices(){
     const track = this.getCurrentTrack();
-    const source = track.getCurrentSource();
+    const source = track?.getCurrentSource();
     return [track?.index,source?.index];
   }
 
