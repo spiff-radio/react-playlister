@@ -28,23 +28,32 @@ export default class Playlist{
 
   }
 
-  getCurrentTrack(){
+  //get current track
+  get track(){
     return (this.tracks || []).find(function(track) {
       return track.current;
     });
   }
 
-  /*
-  getCurrentSource(){
-    const track = this.getCurrentTrack();
-    return track.getCurrentSource();
-  }
-  */
+  //Set which are the current track/source.
+  //We set it directly in the playlist (and we don't just use some indices state) because we want to keep the last selected source as fallback if no source index is defined.
+  set trackIndices(indices){
 
-  getCurrentIndices(){
-    const track = this.getCurrentTrack();
-    const source = track?.getCurrentSource();
-    return [track?.index,source?.index];
+    indices = this.validateIndices(indices);
+    if (indices === undefined) return;
+
+    const trackIndex = indices[0];
+    const sourceIndex = indices[1];
+
+    if (trackIndex !== undefined){
+      this.tracks.forEach(function(track){
+        track.current = (track.index === trackIndex);
+        if (track.current){
+          track.sourceIndex = sourceIndex;
+        }
+      });
+    }
+    DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
   }
 
   getTracksQueue(track,loop,reverse){
@@ -92,7 +101,7 @@ export default class Playlist{
     const trackIndex = track ? track.index : undefined;
     if (!track) return;
 
-    let newSource = track.getCurrentSource();//get current source if any
+    let newSource = track.source;
 
     if (!newSource){
       newSource = track.getNextSource(undefined,true);//get first available source
@@ -142,30 +151,6 @@ export default class Playlist{
     DEBUG && console.log("REACTPLAYLISTER / SET 'PLAYABLE': "+playableSourceCount+"/"+sourceCount+" SOURCES, "+playableTrackCount+"/"+trackCount+" TRACKS");
 
   }
-
-
-  //Set which are the current track/source.
-  //We set it directly in the playlist (and we don't just use some indices state) because we want to keep the last selected source as fallback if no source index is defined.
-  setCurrentTrack(indices){
-
-    indices = this.validateIndices(indices);
-    if (indices === undefined) return;
-
-    const trackIndex = indices[0];
-    const sourceIndex = indices[1];
-
-    if (trackIndex !== undefined){
-      this.tracks.forEach(function(track){
-
-        track.current = (track.index === trackIndex);
-        if (!track.current) return;
-        track.setCurrentSource(sourceIndex);
-
-      });
-    }
-    DEBUG && console.log("REACTPLAYLISTER / SET 'CURRENT' PROPERTY TO TRACK#"+indices[0]+" SOURCE#"+indices[1]);
-  }
-
 
   //format indices the right way + ensure that they exists in the playlist
   validateIndices(indices){

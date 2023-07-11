@@ -16,9 +16,7 @@ export default class Track{
     this.sortedProviders = undefined;
     this.disabledProviders = undefined;
     this.sources = this.buildSources(urls);
-
-    this.setDefaultSource();
-
+    this.sourceIndex = this.getNextSource(undefined,true)?.index; //set default source
   }
 
   buildSources(urls){
@@ -45,26 +43,8 @@ export default class Track{
     if (skipping){
       queue = queue.filter(filterAutoPlayableSource);
     }
+
     return queue;
-  }
-
-  getCurrentSource(){
-    return this.sources.find(function(source) {
-      return source.current;
-    });
-  }
-
-  setDefaultSource(){
-    //set default source
-    const currentSource = this.getNextSource(undefined,true);
-    this.sources = this.sources.map(
-      (item) => {
-        return {
-          ...item,
-          current:(item === currentSource)
-        }
-      }
-    )
   }
 
   getSkipSourceIndices(oldSource,reverse){
@@ -78,19 +58,24 @@ export default class Track{
     this.sources.forEach(function(source){
       const url = source.url;
       source.error = mediaErrors[url];
-      source.playable = (source.supported && !source.error);
-      source.autoplayable = (source.playable && !source.disabled);
     })
 
   }
 
-  setCurrentSource(sourceIndex){
-    if (sourceIndex === undefined) return;
-
-    //update the 'current' property of the track sources
+  //update the 'current' property of the track sources
+  set sourceIndex(index){
+    if (index === undefined) return;
     this.sources.forEach(function(source){
-      source.current = (source.index === sourceIndex);
+      source.current = (source.index === index);
     })
   }
+
+  //get current source
+  get source(){
+    return this.sources.find(function(source) {
+      return source.current;
+    });
+  }
+
 
 }

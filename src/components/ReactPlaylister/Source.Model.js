@@ -11,12 +11,19 @@ export default class Source{
     this.provider=      this.getProvider(url);
     this.current=       false;
     this.supported=     ReactPlayer.canPlay(url);
-    this.playable=      undefined;
-    this.autoplayable=  undefined;
     this.error=         undefined;
     this.disabled=      false;
     this.duration=      undefined;
   }
+
+  get playable(){
+    return (this.supported && !this.error);
+  }
+
+  get autoplayable(){
+    return (this.playable && !this.disabled);
+  }
+
 
   getProvider(url){
     const provider = reactplayerProviders.find(provider => {

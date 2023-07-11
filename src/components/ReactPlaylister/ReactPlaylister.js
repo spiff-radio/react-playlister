@@ -435,10 +435,10 @@ const ReactPlaylister = forwardRef((props, ref) => {
       );
 
       updated.updatePlayableTracks(mediaErrors,props.filterPlayableTrack,props.filterAutoplayableTrack);
-      updated.setCurrentTrack(indices);
+      updated.trackIndices = indices;
 
-      const track = updated.getCurrentTrack();
-      const source = track?.getCurrentSource();
+      const track = updated.track;
+      const source = track?.source;
       setCurrentTrack(track);
       setCurrentSource(source);
 
