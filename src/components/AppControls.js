@@ -6,8 +6,8 @@ export const AppControls = props => {
   const controls = props.controls;
   const playlisterRef = props.playlister;
 
-  const currentTrack = playlist.getCurrentTrack();
-  const currentSource = currentTrack?.getCurrentSource();
+  const currentTrack = playlist?.track;
+  const currentSource = currentTrack?.source;
 
   const trackIndex = currentTrack?.index;
   const sourceIndex = currentSource?.index;

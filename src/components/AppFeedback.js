@@ -40,7 +40,7 @@ export const AppFeedback = props => {
         }
         {
           props.selected &&
-          <Label color="black">selected</Label>
+          <Label color="black">default</Label>
         }
       </span>
     );
@@ -108,7 +108,7 @@ content
         playlist &&
         <ul>
         {
-          playlist.map((track,index) => {
+          playlist.tracks.map((track,index) => {
 
             const isCurrent = track.current;
 
